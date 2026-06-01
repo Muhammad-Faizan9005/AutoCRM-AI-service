@@ -17,9 +17,12 @@ class Settings(BaseSettings):
 
     scheduler_enabled: bool = True
 
-    llm_provider: str = "openai"
-    llm_model: str = "gpt-4o"
+    llm_provider: str = "ollama"
+    llm_model_small: str = "gemma2:2b"
+    llm_model_large: str = "glm-4.6:cloud"
     openai_api_key: str = ""
+    ollama_base_url: str = "http://localhost:11434"
+    llm_enabled: bool = True
 
     vector_store: str = "faiss"
 

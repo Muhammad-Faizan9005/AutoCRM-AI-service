@@ -18,7 +18,7 @@ class AutoCRMAuth:
 
         async with httpx.AsyncClient(timeout=settings.autocrm_auth_timeout) as client:
             response = await client.post(
-                f"{settings.autocrm_base_url}/auth/login",
+                f"{settings.autocrm_base_url}/api/auth/login",
                 json={
                     "email": settings.autocrm_auth_email,
                     "password": settings.autocrm_auth_password,

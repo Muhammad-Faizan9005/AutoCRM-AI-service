@@ -40,3 +40,14 @@ Jobs emit events into the orchestrator. Update intervals in `app/core/jobs.py`.
 Workflows are executed using a simple LangGraph pipeline that gathers context
 and dispatches actions. RAG is an in-memory placeholder and should be swapped
 for FAISS or Pinecone when available.
+
+## Ollama
+Set `LLM_PROVIDER=ollama`, `LLM_MODEL_SMALL=gemma2:2b`, and
+`LLM_MODEL_LARGE=glm-4.6:cloud` in `.env`. Make sure
+Ollama is running at `OLLAMA_BASE_URL`.
+
+Model install:
+```
+ollama pull gemma2:2b
+ollama pull glm-4.6:cloud
+```

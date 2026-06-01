@@ -17,7 +17,7 @@ class AutoCRMClient:
         async with httpx.AsyncClient(timeout=settings.autocrm_auth_timeout) as client:
             response = await client.post(
                 f"{settings.autocrm_base_url}/api/agent/actions",
-                json=action.model_dump(),
+                json=action.model_dump(mode="json"),
                 headers=headers,
             )
             response.raise_for_status()

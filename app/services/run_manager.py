@@ -15,7 +15,7 @@ from app.schemas.events import AgentEventIn
 class RunContext:
     run_id: UUID
     trigger_type: str
-    entity_id: str
+    entity_id: UUID
     entity_type: str
     idempotency_key: str
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from uuid import UUID
 
 from app.core.scheduler import scheduler
 from app.schemas.events import AgentEventIn
@@ -10,6 +11,13 @@ from app.services.autocrm_client import AutoCRMClient
 
 
 logger = logging.getLogger(__name__)
+
+
+def _parse_uuid(value: object) -> UUID | None:
+    try:
+        return UUID(str(value))
+    except (TypeError, ValueError):
+        return None
 
 
 def register_jobs(scheduler_instance) -> None:
@@ -35,14 +43,14 @@ async def _run_daily_summaries() -> None:
     orchestrator = AgentOrchestrator()
     users = await client.list_users()
     for user in users:
-        user_id = str(user.get("id"))
-        if not user_id:
+        user_id = _parse_uuid(user.get("id"))
+        if user_id is None:
             continue
         payload = AgentEventIn(
             event_type="daily_summary",
             entity_id=user_id,
             entity_type="user",
-            actor_id=user_id,
+            actor_id=str(user_id),
             metadata={"source": "scheduler"},
         )
         await orchestrator.handle_event(payload)
@@ -53,8 +61,8 @@ async def _run_stale_leads() -> None:
     orchestrator = AgentOrchestrator()
     leads = await client.list_leads()
     for lead in leads:
-        lead_id = str(lead.get("id"))
-        if not lead_id:
+        lead_id = _parse_uuid(lead.get("id"))
+        if lead_id is None:
             continue
         payload = AgentEventIn(
             event_type="stale_lead",
@@ -71,8 +79,8 @@ async def _run_deal_risks() -> None:
     orchestrator = AgentOrchestrator()
     deals = await client.list_deals()
     for deal in deals:
-        deal_id = str(deal.get("id"))
-        if not deal_id:
+        deal_id = _parse_uuid(deal.get("id"))
+        if deal_id is None:
             continue
         payload = AgentEventIn(
             event_type="deal_risk",

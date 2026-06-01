@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+import json
 from uuid import UUID
 
 import asyncpg
@@ -9,12 +10,14 @@ from app.db.pool import get_pool
 
 
 class AgentStore:
+    def _serialize_payload(self, payload: dict[str, object]) -> str:
+        return json.dumps(payload, default=str)
     async def create_run(
         self,
         *,
         run_id: UUID,
         trigger_type: str,
-        entity_id: str,
+        entity_id: UUID,
         entity_type: str,
         idempotency_key: str,
         status: str = "running",
@@ -63,7 +66,7 @@ class AgentStore:
         run_id: UUID,
         action_type: str,
         entity_type: str,
-        entity_id: str,
+        entity_id: UUID,
         reason: str,
         payload: dict[str, object],
         idempotency_key: str | None,
@@ -81,7 +84,7 @@ class AgentStore:
             entity_type,
             entity_id,
             reason,
-            payload,
+            self._serialize_payload(payload),
             idempotency_key,
             approval_status,
         )

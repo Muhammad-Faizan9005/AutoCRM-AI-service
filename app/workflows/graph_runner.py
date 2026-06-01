@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 from typing import TypedDict
 
 from langgraph.graph import END, StateGraph
@@ -25,11 +26,11 @@ class GraphRunner:
 
     def build(self, action_factory):
         graph = StateGraph(WorkflowState)
-        graph.add_node("context", self._context_node)
-        graph.add_node("action", self._action_node(action_factory))
-        graph.add_edge("context", "action")
-        graph.add_edge("action", END)
-        graph.set_entry_point("context")
+        graph.add_node("build_context", self._context_node)
+        graph.add_node("build_action", self._action_node(action_factory))
+        graph.add_edge("build_context", "build_action")
+        graph.add_edge("build_action", END)
+        graph.set_entry_point("build_context")
         return graph.compile()
 
     async def _context_node(self, state: WorkflowState) -> WorkflowState:
@@ -44,6 +45,8 @@ class GraphRunner:
             run_context = state["run_context"]
             context = state["context"]
             action = action_factory(payload, context)
+            if inspect.isawaitable(action):
+                action = await action
             state["action"] = action
             await self.action_manager.create_action(run_context.run_id, action)
             return state

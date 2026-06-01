@@ -14,14 +14,9 @@ class DailySummaryWorkflow(BaseWorkflow):
         llm = LLMService()
 
         async def make_action(event: AgentEventIn, context: dict[str, object]) -> AgentAction:
-            prompt = (
-                "You are a CRM assistant. Write a concise daily summary for the user. "
-                "Use the provided context. Keep it under 6 bullet points.\n\n"
-                f"Context: {context}"
-            )
             summary = ""
             try:
-                summary = await llm.generate(prompt=prompt, model_tier="small")
+                summary = await llm.generate(workflow="daily_summary", context=str(context), model_tier="small")
             except Exception:
                 summary = ""
             if not summary:

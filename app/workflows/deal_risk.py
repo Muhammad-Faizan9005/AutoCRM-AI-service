@@ -14,14 +14,9 @@ class DealRiskWorkflow(BaseWorkflow):
         llm = LLMService()
 
         async def make_action(event: AgentEventIn, context: dict[str, object]) -> AgentAction:
-            prompt = (
-                "Write a concise deal risk alert message for a manager. "
-                "Keep it to 1-2 sentences.\n\n"
-                f"Context: {context}"
-            )
             message = ""
             try:
-                message = await llm.generate(prompt=prompt, model_tier="large")
+                message = await llm.generate(workflow="deal_risk", context=str(context), model_tier="large")
             except Exception:
                 message = ""
             if not message:

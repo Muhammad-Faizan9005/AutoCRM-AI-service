@@ -14,13 +14,9 @@ class MeetingIntelWorkflow(BaseWorkflow):
         llm = LLMService()
 
         async def make_action(event: AgentEventIn, context: dict[str, object]) -> AgentAction:
-            prompt = (
-                "Summarize the meeting outcome and list action items in one short sentence.\n\n"
-                f"Context: {context}"
-            )
             summary = ""
             try:
-                summary = await llm.generate(prompt=prompt, model_tier="large")
+                summary = await llm.generate(workflow="meeting_intel", context=str(context), model_tier="large")
             except Exception:
                 summary = ""
             if not summary:

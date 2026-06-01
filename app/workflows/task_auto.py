@@ -14,14 +14,9 @@ class TaskAutoWorkflow(BaseWorkflow):
         llm = LLMService()
 
         async def make_action(event: AgentEventIn, context: dict[str, object]) -> AgentAction:
-            prompt = (
-                "Draft a short task description for the next sales step. "
-                "Keep it under 2 sentences.\n\n"
-                f"Context: {context}"
-            )
             description = ""
             try:
-                description = await llm.generate(prompt=prompt, model_tier="small")
+                description = await llm.generate(workflow="task_auto", context=str(context), model_tier="small")
             except Exception:
                 description = ""
             if not description:

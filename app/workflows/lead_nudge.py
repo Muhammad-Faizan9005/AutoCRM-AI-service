@@ -14,14 +14,9 @@ class LeadNudgeWorkflow(BaseWorkflow):
         llm = LLMService()
 
         async def make_action(event: AgentEventIn, context: dict[str, object]) -> AgentAction:
-            prompt = (
-                "Draft a short follow-up task title and description for a sales rep. "
-                "Keep it under 2 sentences.\n\n"
-                f"Context: {context}"
-            )
             content = ""
             try:
-                content = await llm.generate(prompt=prompt, model_tier="small")
+                content = await llm.generate(workflow="lead_nudge", context=str(context), model_tier="small")
             except Exception:
                 content = ""
             if not content:

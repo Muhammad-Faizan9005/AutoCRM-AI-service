@@ -3,12 +3,17 @@ from __future__ import annotations
 import httpx
 
 from app.config import settings
+from app.prompts import load_prompt
 
 
 class LLMService:
-    async def generate(self, *, prompt: str, model_tier: str = "small") -> str:
+    async def generate(self, *, prompt: str, model_tier: str = "small", workflow: str | None = None, context: str = "") -> str:
         if not settings.llm_enabled:
             return ""
+
+        # Compose full prompt with guardrails if workflow is provided
+        if workflow:
+            prompt = load_prompt(workflow, context or prompt)
 
         provider = settings.llm_provider.strip().lower()
         if provider == "ollama":

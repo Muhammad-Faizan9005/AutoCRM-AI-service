@@ -1,0 +1,112 @@
+from __future__ import annotations
+
+import hashlib
+import math
+import re
+
+import httpx
+
+from app.config import settings
+
+
+class EmbeddingService:
+    """
+    Deterministic local embeddings for development and tests.
+
+    This keeps the RAG pipeline operational without a network dependency. The
+    vector-store interface can use provider embeddings later without changing
+    retrieval callers.
+    """
+
+    def __init__(self, dimensions: int = 128) -> None:
+        self.dimensions = dimensions
+
+    async def embed(self, text: str) -> list[float]:
+        vector = [0.0] * self.dimensions
+        for token in self._tokens(text):
+            digest = hashlib.sha256(token.encode("utf-8")).digest()
+            index = int.from_bytes(digest[:4], "big") % self.dimensions
+            sign = 1.0 if digest[4] % 2 == 0 else -1.0
+            vector[index] += sign
+        return self._normalize(vector)
+
+    def _tokens(self, text: str) -> list[str]:
+        return re.findall(r"[a-z0-9]+", text.lower())
+
+    def _normalize(self, vector: list[float]) -> list[float]:
+        magnitude = math.sqrt(sum(value * value for value in vector))
+        if magnitude == 0:
+            return vector
+        return [value / magnitude for value in vector]
+
+
+class HuggingFaceEmbeddingService:
+    def __init__(
+        self,
+        *,
+        api_token: str,
+        model: str,
+        base_url: str,
+        timeout: int = 30,
+    ) -> None:
+        self.api_token = api_token
+        self.model = model
+        self.base_url = base_url.rstrip("/")
+        self.timeout = timeout
+
+    async def embed(self, text: str) -> list[float]:
+        if not self.api_token:
+            raise RuntimeError("HUGGINGFACE_API_TOKEN is required for Hugging Face embeddings")
+
+        url = f"{self.base_url}/pipeline/feature-extraction/{self.model}"
+        headers = {"Authorization": f"Bearer {self.api_token}"}
+        payload = {
+            "inputs": text,
+            "options": {"wait_for_model": True},
+        }
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            response = await client.post(url, json=payload, headers=headers)
+            response.raise_for_status()
+            data = response.json()
+        return self._normalize(self._mean_pool(data))
+
+    def _mean_pool(self, data: object) -> list[float]:
+        if self._is_vector(data):
+            return [float(value) for value in data]
+        if isinstance(data, list) and data and self._is_vector(data[0]):
+            return [float(value) for value in data[0]]
+        if isinstance(data, list) and data and isinstance(data[0], list) and data[0] and self._is_vector(data[0][0]):
+            token_vectors = data[0]
+            dimensions = len(token_vectors[0])
+            pooled = [0.0] * dimensions
+            for vector in token_vectors:
+                for index, value in enumerate(vector):
+                    pooled[index] += float(value)
+            return [value / len(token_vectors) for value in pooled]
+        raise ValueError("Unexpected Hugging Face embedding response shape")
+
+    def _is_vector(self, value: object) -> bool:
+        return isinstance(value, list) and all(isinstance(item, int | float) for item in value)
+
+    def _normalize(self, vector: list[float]) -> list[float]:
+        magnitude = math.sqrt(sum(value * value for value in vector))
+        if magnitude == 0:
+            return vector
+        return [value / magnitude for value in vector]
+
+
+def build_embedding_service():
+    provider = settings.embedding_provider.strip().lower()
+    if provider in {"huggingface", "hf"}:
+        return HuggingFaceEmbeddingService(
+            api_token=settings.huggingface_api_token,
+            model=settings.huggingface_embedding_model,
+            base_url=settings.huggingface_api_base_url,
+        )
+    return EmbeddingService(dimensions=settings.embedding_dimensions)
+
+
+def cosine_similarity(left: list[float], right: list[float]) -> float:
+    if not left or not right:
+        return 0.0
+    return sum(a * b for a, b in zip(left, right))

@@ -6,16 +6,20 @@ from uuid import UUID, uuid4
 from app.db.agent_store import AgentStore
 from app.schemas.actions import AgentAction
 from app.services.autocrm_client import AutoCRMClient
+from app.services.tool_registry import ToolRegistry
 
 
 class ActionManager:
     def __init__(self) -> None:
         self.store = AgentStore()
         self.client = AutoCRMClient()
+        self.tools = ToolRegistry()
 
     async def create_action(self, run_id: UUID, action: AgentAction) -> UUID:
+        self.tools.validate_action_tool(action)
         action_id = uuid4()
         approval_status = "pending" if self._requires_approval(action) else "auto_approved"
+        action.approval_status = approval_status
         await self.store.create_action(
             action_id=action_id,
             run_id=run_id,
@@ -38,6 +42,7 @@ class ActionManager:
                 expires_at=datetime.utcnow() + timedelta(hours=24),
                 fallback_policy="skip",
             )
+            await self.client.dispatch_action(action)
             return action_id
 
         await self.client.dispatch_action(action)

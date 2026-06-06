@@ -4,10 +4,12 @@ import asyncio
 import logging
 from uuid import UUID
 
+from app.config import settings
 from app.core.scheduler import scheduler
 from app.schemas.events import AgentEventIn
 from app.services.agent_orchestrator import AgentOrchestrator
 from app.services.autocrm_client import AutoCRMClient
+from app.services.transcription_service import TranscriptionService
 
 
 logger = logging.getLogger(__name__)
@@ -21,21 +23,39 @@ def _parse_uuid(value: object) -> UUID | None:
 
 
 def register_jobs(scheduler_instance) -> None:
-    scheduler_instance.add_job(run_daily_summaries, "cron", hour=8, minute=0)
-    scheduler_instance.add_job(run_stale_leads, "interval", hours=6)
-    scheduler_instance.add_job(run_deal_risks, "interval", hours=1)
+    scheduler_instance.add_job(_run_daily_summaries, "cron", hour=8, minute=0)
+    scheduler_instance.add_job(_run_stale_leads, "interval", hours=6)
+    scheduler_instance.add_job(_run_deal_risks, "interval", hours=1)
+    scheduler_instance.add_job(
+        _run_transcription_stale_sweep,
+        "interval",
+        minutes=max(1, settings.transcription_stale_sweep_interval_minutes),
+    )
+
+
+def _run_coroutine(coro) -> None:
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        asyncio.run(coro)
+        return
+    loop.create_task(coro)
 
 
 def run_daily_summaries() -> None:
-    asyncio.create_task(_run_daily_summaries())
+    _run_coroutine(_run_daily_summaries())
 
 
 def run_stale_leads() -> None:
-    asyncio.create_task(_run_stale_leads())
+    _run_coroutine(_run_stale_leads())
 
 
 def run_deal_risks() -> None:
-    asyncio.create_task(_run_deal_risks())
+    _run_coroutine(_run_deal_risks())
+
+
+def run_transcription_stale_sweep() -> None:
+    _run_coroutine(_run_transcription_stale_sweep())
 
 
 async def _run_daily_summaries() -> None:
@@ -90,3 +110,12 @@ async def _run_deal_risks() -> None:
             metadata={"source": "scheduler"},
         )
         await orchestrator.handle_event(payload)
+
+
+async def _run_transcription_stale_sweep() -> None:
+    try:
+        recovered = await TranscriptionService().sweep_stale_processing_jobs()
+        if recovered:
+            logger.info("transcription_stale_sweep_recovered count=%s", recovered)
+    except Exception:
+        logger.exception("transcription_stale_sweep_failed")

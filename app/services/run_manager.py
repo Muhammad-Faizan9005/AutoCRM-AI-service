@@ -4,7 +4,10 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID, uuid4
 
-import asyncpg
+try:
+    import asyncpg
+except ImportError:  # pragma: no cover
+    asyncpg = None
 
 from app.core.idempotency import build_idempotency_key
 from app.db.agent_store import AgentStore
@@ -39,8 +42,10 @@ class RunManager:
                 entity_type=payload.entity_type,
                 idempotency_key=key,
             )
-        except asyncpg.UniqueViolationError:
-            return None
+        except Exception as exc:
+            if asyncpg is not None and isinstance(exc, asyncpg.UniqueViolationError):
+                return None
+            raise
 
         return RunContext(
             run_id=run_id,

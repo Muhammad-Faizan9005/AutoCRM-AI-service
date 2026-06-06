@@ -4,7 +4,10 @@ from datetime import datetime
 import json
 from uuid import UUID
 
-import asyncpg
+try:
+    import asyncpg  # noqa: F401
+except ImportError:  # pragma: no cover
+    asyncpg = None
 
 from app.db.pool import get_pool
 
@@ -12,6 +15,7 @@ from app.db.pool import get_pool
 class AgentStore:
     def _serialize_payload(self, payload: dict[str, object]) -> str:
         return json.dumps(payload, default=str)
+
     async def create_run(
         self,
         *,
@@ -89,6 +93,29 @@ class AgentStore:
             approval_status,
         )
 
+    async def create_trace(
+        self,
+        *,
+        run_id: UUID,
+        step: str,
+        status: str,
+        payload: dict[str, object],
+    ) -> None:
+        query = (
+            "INSERT INTO ai_run_traces (run_id, step, status, payload) "
+            "VALUES ($1, $2, $3, $4::jsonb)"
+        )
+        await get_pool().execute(query, run_id, step, status, self._serialize_payload(payload))
+
+    async def list_run_traces(self, run_id: UUID) -> list[dict[str, object]]:
+        query = (
+            "SELECT step, status, payload, created_at "
+            "FROM ai_run_traces WHERE run_id=$1 "
+            "ORDER BY created_at ASC"
+        )
+        rows = await get_pool().fetch(query, run_id)
+        return [dict(row) for row in rows]
+
     async def create_approval_request(
         self,
         *,
@@ -119,3 +146,19 @@ class AgentStore:
         query = "SELECT 1 FROM ai_runs WHERE idempotency_key=$1 LIMIT 1"
         row = await get_pool().fetchrow(query, idempotency_key)
         return row is not None
+
+    async def list_recent_entity_actions(
+        self,
+        *,
+        entity_id: UUID,
+        entity_type: str,
+        limit: int = 5,
+    ) -> list[dict[str, object]]:
+        query = (
+            "SELECT action_type, reason, payload, approval_status, created_at "
+            "FROM ai_actions "
+            "WHERE entity_id=$1::uuid AND entity_type=$2 "
+            "ORDER BY created_at DESC LIMIT $3"
+        )
+        rows = await get_pool().fetch(query, entity_id, entity_type, limit)
+        return [dict(row) for row in rows]

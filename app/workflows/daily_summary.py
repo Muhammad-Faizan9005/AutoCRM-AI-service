@@ -18,12 +18,17 @@ class DailySummaryWorkflow(BaseWorkflow):
         async def make_action(event: AgentEventIn, context: dict[str, object]) -> AgentAction:
             plan = await planner.plan_action(event, context)
             summary = ""
+            prompt = (
+                "Create a concise daily CRM summary for a sales manager. Include useful context from leads, deals, tasks, "
+                "risks, and follow-ups. Use bullets. Do not return generic fallback text unless no CRM context exists.\n\n"
+                f"CRM context: {context}"
+            )
             try:
-                summary = await llm.generate(workflow="daily_summary", context=str(context), model_tier="small")
+                summary = await llm.generate(prompt=prompt, workflow=None, context="", model_tier="small")
             except Exception:
                 summary = ""
             if not summary:
-                summary = "Daily summary is not available yet. Check leads and tasks for updates."
+                summary = "Daily CRM summary: review open leads, pending tasks, and active deals for follow-up priorities."
             return AgentAction(
                 action_type=plan.action_type,
                 entity_type=event.entity_type,

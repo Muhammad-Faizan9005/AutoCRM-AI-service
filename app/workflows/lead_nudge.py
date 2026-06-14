@@ -18,12 +18,18 @@ class LeadNudgeWorkflow(BaseWorkflow):
         async def make_action(event: AgentEventIn, context: dict[str, object]) -> AgentAction:
             plan = await planner.plan_action(event, context)
             content = ""
+            prompt = (
+                "Write a personalized CRM follow-up suggestion for this lead. "
+                "Use the provided CRM context and mention the specific reason for the follow-up. "
+                "Avoid generic advice. If context is thin, say what information should be captured next.\n\n"
+                f"Lead event: {event.event_type}\nContext: {context}"
+            )
             try:
-                content = await llm.generate(workflow="lead_nudge", context=str(context), model_tier="small")
+                content = await llm.generate(prompt=prompt, workflow=None, context="", model_tier="small")
             except Exception:
                 content = ""
             if not content:
-                content = "Follow up with the lead and capture next steps."
+                content = f"Follow up with this lead because {plan.reason.lower()}. Capture the next step, timeline, and decision maker."
             return AgentAction(
                 action_type=plan.action_type,
                 entity_type=event.entity_type,

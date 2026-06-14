@@ -12,6 +12,7 @@ from app.db.pool import get_pool
 from app.schemas.events import AgentEventIn
 from app.schemas.transcriptions import RecordingReadyIn
 from app.services.agent_orchestrator import AgentOrchestrator
+from app.services.llm_service import LLMService
 
 logger = logging.getLogger(__name__)
 _schema_ready = False
@@ -45,6 +46,7 @@ class TranscriptionService:
                 recording_url TEXT,
                 assemblyai_transcript_id TEXT,
                 transcript_text TEXT,
+                meeting_summary TEXT,
                 status VARCHAR(20) NOT NULL DEFAULT 'pending',
                 attempt_count INTEGER NOT NULL DEFAULT 0,
                 max_attempts INTEGER NOT NULL DEFAULT 3,
@@ -62,6 +64,7 @@ class TranscriptionService:
             )
             """
         )
+        await get_pool().execute("ALTER TABLE ai_meeting_transcripts ADD COLUMN IF NOT EXISTS meeting_summary TEXT")
         await get_pool().execute(
             "CREATE INDEX IF NOT EXISTS idx_ai_meeting_transcripts_status ON ai_meeting_transcripts(status)"
         )
@@ -155,7 +158,8 @@ class TranscriptionService:
                 return
             try:
                 transcript = await self._transcribe(job)
-                await self._complete_job(recording_id, transcript)
+                summary = await self._generate_meeting_summary(transcript.get("text") or "")
+                await self._complete_job(recording_id, transcript, summary)
                 await self._trigger_meeting_intel(recording_id)
                 return
             except Exception as exc:
@@ -332,13 +336,29 @@ class TranscriptionService:
         except ValueError:
             return False
 
-    async def _complete_job(self, recording_id: UUID, transcript: dict[str, str | None]) -> None:
+    async def _generate_meeting_summary(self, transcript_text: str) -> str:
+        if not transcript_text.strip():
+            return ""
+        prompt = (
+            "Summarize this CRM meeting transcript in 2-4 concise sentences. "
+            "If it is only greetings, audio testing, or small talk, say that no meaningful business discussion occurred. "
+            "Do not invent customer requirements or next steps.\n\n"
+            f"Transcript:\n{transcript_text}"
+        )
+        try:
+            summary = await LLMService().generate(prompt=prompt, workflow=None, context="", model_tier="small")
+            return str(summary or "").strip()
+        except Exception:
+            return "Meeting summary could not be generated automatically."
+
+    async def _complete_job(self, recording_id: UUID, transcript: dict[str, str | None], meeting_summary: str = "") -> None:
         await get_pool().execute(
             """
             UPDATE ai_meeting_transcripts
             SET status='completed',
                 assemblyai_transcript_id=$2,
                 transcript_text=$3,
+                meeting_summary=$4,
                 error=NULL,
                 completed_at=NOW(),
                 updated_at=NOW()
@@ -347,8 +367,9 @@ class TranscriptionService:
             recording_id,
             transcript.get("id"),
             transcript.get("text"),
+            meeting_summary,
         )
-        await self._update_call_session_transcript(recording_id, transcript.get("text") or "")
+        await self._update_call_session_transcript(recording_id, transcript.get("text") or "", meeting_summary)
 
     async def _record_attempt_failure(self, recording_id: UUID, error: str) -> dict[str, Any] | None:
         row = await get_pool().fetchrow(
@@ -448,16 +469,17 @@ class TranscriptionService:
         except Exception:
             logger.debug("call_sessions status update skipped", exc_info=True)
 
-    async def _update_call_session_transcript(self, recording_id: UUID, transcript_text: str) -> None:
+    async def _update_call_session_transcript(self, recording_id: UUID, transcript_text: str, meeting_summary: str = "") -> None:
         try:
             await get_pool().execute(
                 """
                 UPDATE call_sessions
-                SET transcript=$2, processing_status='completed', updated_at=NOW()
+                SET transcript=$2, meeting_summary=$3, processing_status='completed', updated_at=NOW()
                 WHERE id=$1
                 """,
                 recording_id,
                 transcript_text,
+                meeting_summary,
             )
         except Exception:
             logger.debug("call_sessions transcript update skipped", exc_info=True)

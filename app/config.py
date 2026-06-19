@@ -1,5 +1,6 @@
 ﻿from __future__ import annotations
 
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings
 
 
@@ -42,7 +43,15 @@ class Settings(BaseSettings):
     rag_top_k: int = 5
 
     assemblyai_api_key: str = ""
-    transcription_recordings_dir: str = ""
+    transcription_recordings_dir: str = Field(
+        default="",
+        validation_alias=AliasChoices(
+            "TRANSCRIPTION_RECORDINGS_DIR",
+            "AUTOCRM_RECORDINGS_DIR",
+            "CALL_RECORDINGS_DIR",
+            "RECORDINGS_STORAGE_DIR",
+        ),
+    )
     transcription_max_attempts: int = 3
     transcription_retry_delay_seconds: int = 5
     transcription_processing_timeout_minutes: int = 30

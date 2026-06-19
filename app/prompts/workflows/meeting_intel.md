@@ -7,4 +7,7 @@ Rules:
 - Do not create tasks from greetings, mic checks, repeated words, introductions, small talk, or unclear speech.
 - Do not invent follow-ups. Use only what is explicitly supported by the transcript.
 - If there are no concrete action items, return exactly: NO_ACTION_ITEMS
-- If there are action items, return a concise task description in 1-3 bullet points.
+- If there are action items, return one short task only.
+- Keep the task description to one concise sentence; do not use bullet lists.
+- Put product lists, quantities, customer context, and longer transcript details into note content, not the task.
+- Include a due date only when the transcript clearly states a date or time.

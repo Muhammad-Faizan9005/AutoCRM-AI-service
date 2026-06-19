@@ -81,6 +81,9 @@ class TranscriptionService:
         existing = await self.get_job(payload.recording_id)
         if existing and existing["status"] == "completed":
             return dict(existing)
+        metadata = {**(payload.metadata or {})}
+        if payload.actor_id:
+            metadata.setdefault("actor_id", payload.actor_id)
 
         if existing is None:
             row = await get_pool().fetchrow(
@@ -100,7 +103,7 @@ class TranscriptionService:
                 payload.recording_path,
                 payload.recording_url,
                 settings.transcription_max_attempts,
-                self._json(payload.metadata),
+                self._json(metadata),
             )
             await self._update_call_session_status(payload.recording_id, "pending")
             return dict(row)
@@ -128,7 +131,7 @@ class TranscriptionService:
                 payload.source_type,
                 payload.recording_path,
                 payload.recording_url,
-                self._json(payload.metadata),
+                self._json(metadata),
             )
             await self._update_call_session_status(payload.recording_id, row["status"])
             return dict(row)
@@ -327,7 +330,15 @@ class TranscriptionService:
         if configured:
             return Path(configured).expanduser().resolve()
         project_root = Path(__file__).resolve().parents[4]
-        return (project_root / "backend" / "storage" / "recordings").resolve()
+        candidates = [
+            project_root / "AutoCRM" / "storage" / "recordings",
+            project_root / "storage" / "recordings",
+            Path.cwd() / "storage" / "recordings",
+        ]
+        for candidate in candidates:
+            if candidate.exists():
+                return candidate.resolve()
+        return candidates[0].resolve()
 
     def _is_within(self, path: Path, base_dir: Path) -> bool:
         try:
@@ -438,12 +449,23 @@ class TranscriptionService:
             return
         entity_id = job.get("entity_id") or job.get("meeting_id") or job.get("recording_id")
         entity_type = str(job.get("entity_type") or "meeting")
+        metadata_raw = job.get("metadata") or {}
+        if isinstance(metadata_raw, str):
+            try:
+                import json
+
+                metadata = json.loads(metadata_raw)
+            except Exception:
+                metadata = {}
+        else:
+            metadata = dict(metadata_raw)
         payload = AgentEventIn(
             event_type="meeting_complete",
             entity_id=entity_id,
             entity_type=entity_type,
-            actor_id=None,
+            actor_id=str(metadata.get("actor_id") or "") or None,
             metadata={
+                **metadata,
                 "source": "transcription_service",
                 "recording_id": str(job["recording_id"]),
                 "meeting_id": str(job.get("meeting_id") or ""),

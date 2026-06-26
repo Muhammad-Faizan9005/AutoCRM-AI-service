@@ -2,21 +2,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from uuid import UUID, uuid4
-
-try:
-    import asyncpg
-except ImportError:  # pragma: no cover
-    asyncpg = None
+from uuid import NAMESPACE_URL, UUID, uuid5
 
 from app.core.idempotency import build_idempotency_key
-from app.db.agent_store import AgentStore
 from app.schemas.events import AgentEventIn
+from app.services.autocrm_client import AutoCRMClient
 
 
 @dataclass
 class RunContext:
     run_id: UUID
+    backend_run_id: UUID
     trigger_type: str
     entity_id: UUID
     entity_type: str
@@ -25,30 +21,26 @@ class RunContext:
 
 class RunManager:
     def __init__(self) -> None:
-        self.store = AgentStore()
+        self.client = AutoCRMClient()
 
     async def start_run(self, payload: AgentEventIn) -> RunContext | None:
         window_bucket = self._window_bucket(payload)
         key = build_idempotency_key(payload.event_type, payload.entity_id, window_bucket)
-        if await self.store.run_exists(key):
+        run_id = uuid5(NAMESPACE_URL, f"autocrm-ai-run:{key}")
+        run = await self.client.create_run(
+            external_run_id=run_id,
+            trigger_type=payload.event_type,
+            entity_id=payload.entity_id,
+            entity_type=payload.entity_type,
+            event_payload=payload.model_dump(mode="json"),
+        )
+        backend_run_id = UUID(str(run.get("id") or run_id))
+        if str(run.get("status") or "").lower() in {"completed", "failed", "cancelled"}:
             return None
-
-        run_id = uuid4()
-        try:
-            await self.store.create_run(
-                run_id=run_id,
-                trigger_type=payload.event_type,
-                entity_id=payload.entity_id,
-                entity_type=payload.entity_type,
-                idempotency_key=key,
-            )
-        except Exception as exc:
-            if asyncpg is not None and isinstance(exc, asyncpg.UniqueViolationError):
-                return None
-            raise
 
         return RunContext(
             run_id=run_id,
+            backend_run_id=backend_run_id,
             trigger_type=payload.event_type,
             entity_id=payload.entity_id,
             entity_type=payload.entity_type,
@@ -63,8 +55,8 @@ class RunManager:
         failure_cause: str | None = None,
         failure_detail: str | None = None,
     ) -> None:
-        await self.store.complete_run(
-            run_id=run_id,
+        await self.client.complete_run(
+            run_id,
             status=status,
             summary=summary,
             failure_cause=failure_cause,

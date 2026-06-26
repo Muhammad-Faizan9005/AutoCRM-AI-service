@@ -27,7 +27,7 @@ class AgentAction(Base):
     __tablename__ = "ai_actions"
 
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid())
-    run_id = Column(UUID(as_uuid=True), ForeignKey("agent_runs.id", ondelete="CASCADE"))
+    run_id = Column(UUID(as_uuid=True), ForeignKey("ai_runs.id", ondelete="CASCADE"))
     action_type = Column(String, nullable=False)
     entity_type = Column(String, nullable=False)
     entity_id = Column(UUID(as_uuid=True), nullable=False)
@@ -42,7 +42,7 @@ class ApprovalRequest(Base):
     __tablename__ = "ai_approval_requests"
 
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid())
-    agent_action_id = Column(UUID(as_uuid=True), ForeignKey("agent_actions.id", ondelete="CASCADE"))
+    agent_action_id = Column(UUID(as_uuid=True), ForeignKey("ai_actions.id", ondelete="CASCADE"))
     requested_by = Column(String, nullable=False)
     approver_id = Column(UUID(as_uuid=True))
     state = Column(String, nullable=False, server_default="pending")

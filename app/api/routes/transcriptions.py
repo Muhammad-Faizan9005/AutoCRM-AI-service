@@ -3,8 +3,9 @@ from __future__ import annotations
 import asyncio
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 
+from app.api.dependencies import require_webhook_token
 from app.schemas.transcriptions import RecordingReadyIn, RecordingReadyResponse, TranscriptJobOut
 from app.services.transcription_service import TranscriptionService
 
@@ -12,7 +13,12 @@ from app.services.transcription_service import TranscriptionService
 router = APIRouter()
 
 
-@router.post("/recording-ready", response_model=RecordingReadyResponse, status_code=status.HTTP_202_ACCEPTED)
+@router.post(
+    "/recording-ready",
+    response_model=RecordingReadyResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    dependencies=[Depends(require_webhook_token)],
+)
 async def recording_ready(payload: RecordingReadyIn, background_tasks: BackgroundTasks) -> RecordingReadyResponse:
     service = TranscriptionService()
     job = await service.accept_recording(payload)
@@ -30,7 +36,12 @@ async def get_transcription_job(recording_id: UUID) -> TranscriptJobOut:
     return TranscriptJobOut(**job)
 
 
-@router.post("/{recording_id}/retry", response_model=RecordingReadyResponse, status_code=status.HTTP_202_ACCEPTED)
+@router.post(
+    "/{recording_id}/retry",
+    response_model=RecordingReadyResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    dependencies=[Depends(require_webhook_token)],
+)
 async def retry_transcription_job(
     recording_id: UUID,
     background_tasks: BackgroundTasks,
@@ -46,7 +57,7 @@ async def retry_transcription_job(
     return RecordingReadyResponse(status="accepted", recording_id=recording_id, job_status=job["status"])
 
 
-@router.post("/sweep-stale", status_code=status.HTTP_202_ACCEPTED)
+@router.post("/sweep-stale", status_code=status.HTTP_202_ACCEPTED, dependencies=[Depends(require_webhook_token)])
 async def sweep_stale_transcription_jobs() -> dict[str, int]:
     service = TranscriptionService()
     count = await service.sweep_stale_processing_jobs()

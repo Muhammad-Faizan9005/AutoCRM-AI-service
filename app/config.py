@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     # Set these after issuing a credential via POST /api/agent/ai-agents/{key}/credentials
     autocrm_ai_agent_key: str = ""      # e.g. action_manager_agent
     autocrm_ai_service_token: str = ""  # raw token returned once on credential creation
+    ai_service_webhook_token: str = ""
 
     # Legacy: email/password login (kept for backward compat; ignored when ai_agent_key is set)
     autocrm_auth_email: str = ""
@@ -26,8 +27,8 @@ class Settings(BaseSettings):
     scheduler_enabled: bool = True
 
     llm_provider: str = "ollama"
-    llm_model_small: str = "gemma2:2b"
-    llm_model_large: str = "glm-4.6:cloud"
+    llm_model_small: str = "minimax-m3:cloud"
+    llm_model_large: str = "minimax-m3:cloud"
     openai_api_key: str = ""
     ollama_base_url: str = "http://localhost:11434"
     llm_enabled: bool = True
@@ -41,6 +42,12 @@ class Settings(BaseSettings):
     rag_chunk_size: int = 900
     rag_chunk_overlap: int = 120
     rag_top_k: int = 5
+    rag_index_dir: str = "storage/faiss"
+    rag_sync_enabled: bool = True
+    rag_sync_interval_seconds: int = 300
+    rag_sync_batch_size: int = 100
+    rag_sync_min_delay_seconds: float = 0.05
+    rag_sync_state_file: str = "storage/rag_sync_state.json"
 
     assemblyai_api_key: str = ""
     transcription_recordings_dir: str = Field(

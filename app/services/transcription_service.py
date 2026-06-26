@@ -33,10 +33,11 @@ class TranscriptionService:
             _schema_ready = True
 
     async def _ensure_schema(self) -> None:
+        await get_pool().execute('CREATE EXTENSION IF NOT EXISTS "pgcrypto"')
         await get_pool().execute(
             """
             CREATE TABLE IF NOT EXISTS ai_meeting_transcripts (
-                id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 recording_id UUID NOT NULL UNIQUE,
                 meeting_id UUID,
                 entity_id UUID,

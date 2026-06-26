@@ -12,7 +12,7 @@ from app.workflows.lead_nudge import LeadNudgeWorkflow
 def test_daily_summary_workflow_emits_note(monkeypatch, sample_run_context) -> None:
     captured = {}
 
-    async def fake_build_context(self, entity_id, entity_type):
+    async def fake_build_context(self, entity_id, entity_type, **kwargs):
         return {"entity_id": entity_id, "entity_type": entity_type}
 
     async def fake_create_action(self, run_id, action):
@@ -22,8 +22,12 @@ def test_daily_summary_workflow_emits_note(monkeypatch, sample_run_context) -> N
     async def fake_llm(self, **kwargs):
         return "Summary content"
 
+    async def fake_trace(self, run_id, *, step, status, payload):
+        return {}
+
     monkeypatch.setattr("app.workflows.graph_runner.ContextService.build_context", fake_build_context)
     monkeypatch.setattr("app.workflows.graph_runner.ActionManager.create_action", fake_create_action)
+    monkeypatch.setattr("app.workflows.graph_runner.AutoCRMClient.create_run_trace", fake_trace)
     monkeypatch.setattr("app.workflows.daily_summary.LLMService.generate", fake_llm)
 
     payload = AgentEventIn(event_type="daily_summary", entity_id=uuid4(), entity_type="user", actor_id=str(uuid4()))
@@ -36,7 +40,7 @@ def test_daily_summary_workflow_emits_note(monkeypatch, sample_run_context) -> N
 def test_lead_nudge_workflow_emits_task(monkeypatch, sample_run_context) -> None:
     captured = {}
 
-    async def fake_build_context(self, entity_id, entity_type):
+    async def fake_build_context(self, entity_id, entity_type, **kwargs):
         return {"entity_id": entity_id, "entity_type": entity_type}
 
     async def fake_create_action(self, run_id, action):
@@ -46,8 +50,12 @@ def test_lead_nudge_workflow_emits_task(monkeypatch, sample_run_context) -> None
     async def fake_llm(self, **kwargs):
         return "Follow-up tomorrow"
 
+    async def fake_trace(self, run_id, *, step, status, payload):
+        return {}
+
     monkeypatch.setattr("app.workflows.graph_runner.ContextService.build_context", fake_build_context)
     monkeypatch.setattr("app.workflows.graph_runner.ActionManager.create_action", fake_create_action)
+    monkeypatch.setattr("app.workflows.graph_runner.AutoCRMClient.create_run_trace", fake_trace)
     monkeypatch.setattr("app.workflows.lead_nudge.LLMService.generate", fake_llm)
 
     payload = AgentEventIn(event_type="stale_lead", entity_id=uuid4(), entity_type="lead", actor_id=str(uuid4()))
@@ -61,7 +69,7 @@ def test_deal_risk_workflow_sets_alert_recipient(monkeypatch, sample_run_context
     captured = {}
     actor_id = str(uuid4())
 
-    async def fake_build_context(self, entity_id, entity_type):
+    async def fake_build_context(self, entity_id, entity_type, **kwargs):
         return {"entity_id": entity_id, "entity_type": entity_type}
 
     async def fake_create_action(self, run_id, action):
@@ -71,8 +79,12 @@ def test_deal_risk_workflow_sets_alert_recipient(monkeypatch, sample_run_context
     async def fake_llm(self, **kwargs):
         return "High churn risk"
 
+    async def fake_trace(self, run_id, *, step, status, payload):
+        return {}
+
     monkeypatch.setattr("app.workflows.graph_runner.ContextService.build_context", fake_build_context)
     monkeypatch.setattr("app.workflows.graph_runner.ActionManager.create_action", fake_create_action)
+    monkeypatch.setattr("app.workflows.graph_runner.AutoCRMClient.create_run_trace", fake_trace)
     monkeypatch.setattr("app.workflows.deal_risk.LLMService.generate", fake_llm)
 
     payload = AgentEventIn(event_type="deal_risk", entity_id=uuid4(), entity_type="deal", actor_id=actor_id)

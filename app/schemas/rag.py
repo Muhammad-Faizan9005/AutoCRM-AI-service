@@ -32,6 +32,10 @@ class RetrievalQuery(BaseModel):
     query: str
     limit: int = 5
     source_filter: str | None = None
+    global_search: bool = False
+    candidate_entity_ids: list[str] = Field(default_factory=list)
+    workflow: str | None = None
+    owner_id: str | None = None
 
 
 class RetrievedContext(BaseModel):

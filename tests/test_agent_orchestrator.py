@@ -13,6 +13,7 @@ def test_orchestrator_runs_supported_event_to_completion(monkeypatch) -> None:
     calls = []
     run_context = RunContext(
         run_id=uuid4(),
+        backend_run_id=uuid4(),
         trigger_type="stale_lead",
         entity_id=uuid4(),
         entity_type="lead",
@@ -23,15 +24,23 @@ def test_orchestrator_runs_supported_event_to_completion(monkeypatch) -> None:
         calls.append("start_run")
         return run_context
 
-    async def fake_loop_run(self, payload, context):
+    async def fake_workflow_run(self, payload, context):
         calls.append("execute_agent_loop")
 
     async def fake_complete(self, run_id, status, summary=None, failure_cause=None, failure_detail=None):
         calls.append(("complete_run", status, summary))
 
+    async def fake_trace(self, run_id, *, step, status, payload):
+        return {}
+
     monkeypatch.setattr(orchestrator_module.RunManager, "start_run", fake_start)
-    monkeypatch.setattr(orchestrator_module.AgentLoop, "run", fake_loop_run)
+    class FakeWorkflow:
+        async def run(self, payload, context):
+            await fake_workflow_run(self, payload, context)
+
+    monkeypatch.setattr(orchestrator_module.WorkflowRouter, "resolve", lambda self, payload: FakeWorkflow())
     monkeypatch.setattr(orchestrator_module.RunManager, "complete_run", fake_complete)
+    monkeypatch.setattr(orchestrator_module.AutoCRMClient, "create_run_trace", fake_trace)
 
     payload = AgentEventIn(
         event_type="stale_lead",
@@ -58,7 +67,7 @@ def test_orchestrator_skips_unsupported_event(monkeypatch) -> None:
     monkeypatch.setattr(orchestrator_module.RunManager, "start_run", fake_start)
 
     payload = AgentEventIn(
-        event_type="meeting_complete",
+        event_type="unknown_event",
         entity_id=uuid4(),
         entity_type="lead",
         actor_id=str(uuid4()),
@@ -73,6 +82,7 @@ def test_orchestrator_marks_run_failed_when_agent_loop_fails(monkeypatch) -> Non
     completions = []
     run_context = RunContext(
         run_id=uuid4(),
+        backend_run_id=uuid4(),
         trigger_type="deal_risk",
         entity_id=uuid4(),
         entity_type="deal",
@@ -82,7 +92,7 @@ def test_orchestrator_marks_run_failed_when_agent_loop_fails(monkeypatch) -> Non
     async def fake_start(self, payload):
         return run_context
 
-    async def fake_loop_run(self, payload, context):
+    async def fake_workflow_run(self, payload, context):
         raise RuntimeError("planner exploded")
 
     async def fake_complete(self, run_id, status, summary=None, failure_cause=None, failure_detail=None):
@@ -95,9 +105,17 @@ def test_orchestrator_marks_run_failed_when_agent_loop_fails(monkeypatch) -> Non
             }
         )
 
+    async def fake_trace(self, run_id, *, step, status, payload):
+        return {}
+
     monkeypatch.setattr(orchestrator_module.RunManager, "start_run", fake_start)
-    monkeypatch.setattr(orchestrator_module.AgentLoop, "run", fake_loop_run)
+    class FakeWorkflow:
+        async def run(self, payload, context):
+            await fake_workflow_run(self, payload, context)
+
+    monkeypatch.setattr(orchestrator_module.WorkflowRouter, "resolve", lambda self, payload: FakeWorkflow())
     monkeypatch.setattr(orchestrator_module.RunManager, "complete_run", fake_complete)
+    monkeypatch.setattr(orchestrator_module.AutoCRMClient, "create_run_trace", fake_trace)
 
     payload = AgentEventIn(
         event_type="deal_risk",

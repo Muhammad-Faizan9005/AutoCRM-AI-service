@@ -11,21 +11,7 @@ class ToolRegistry:
         self.client = AutoCRMClient()
 
     async def fetch_entity_snapshot(self, entity_id: UUID, entity_type: str) -> dict[str, object]:
-        entity_type_norm = entity_type.strip().lower()
-
-        if entity_type_norm == "lead":
-            leads = await self.client.list_leads()
-            return self._find_by_id(leads, entity_id)
-
-        if entity_type_norm == "deal":
-            deals = await self.client.list_deals()
-            return self._find_by_id(deals, entity_id)
-
-        if entity_type_norm == "user":
-            users = await self.client.list_users()
-            return self._find_by_id(users, entity_id)
-
-        return {}
+        return await self.client.get_entity_snapshot(entity_type.strip().lower(), entity_id)
 
     def list_tools(self) -> list[dict[str, object]]:
         return [
@@ -58,10 +44,3 @@ class ToolRegistry:
             raise ValueError("create_note requires a title or content")
         if action.action_type == "create_alert" and not action.data.get("recipient_id"):
             raise ValueError("create_alert requires a recipient_id")
-
-    def _find_by_id(self, items: list[dict[str, object]], entity_id: UUID) -> dict[str, object]:
-        lookup = str(entity_id)
-        for item in items:
-            if str(item.get("id")) == lookup:
-                return item
-        return {}

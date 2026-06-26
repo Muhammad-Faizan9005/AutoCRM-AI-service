@@ -30,13 +30,13 @@ class AgentLoop:
 
     async def run(self, payload: AgentEventIn, run_context: RunContext) -> UUID:
         await self.trace.record(
-            run_context.run_id,
+            run_context.backend_run_id,
             "event_received",
             payload=payload.model_dump(mode="json"),
         )
 
         await self.trace.record(
-            run_context.run_id,
+            run_context.backend_run_id,
             "tool_registry_loaded",
             payload={"tools": self.tools.list_tools()},
         )
@@ -48,7 +48,7 @@ class AgentLoop:
             metadata=payload.metadata or {},
         )
         await self.trace.record(
-            run_context.run_id,
+            run_context.backend_run_id,
             "context_built",
             payload={
                 "context": context,
@@ -58,14 +58,14 @@ class AgentLoop:
 
         plan = await self.planner.plan_action(payload, context)
         await self.trace.record(
-            run_context.run_id,
+            run_context.backend_run_id,
             "plan_made",
             payload={"plan": plan.model_dump(mode="json")},
         )
 
         action = await self._build_action(payload, context, plan)
         await self.trace.record(
-            run_context.run_id,
+            run_context.backend_run_id,
             "tool_chosen",
             payload={
                 "tool": plan.selected_tool,
@@ -76,7 +76,7 @@ class AgentLoop:
 
         action_id = await self.action_manager.create_action(run_context.run_id, action)
         await self.trace.record(
-            run_context.run_id,
+            run_context.backend_run_id,
             "action_executed",
             payload={
                 "action_id": str(action_id),

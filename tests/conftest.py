@@ -95,6 +95,7 @@ from app.services.run_manager import RunContext
 def sample_run_context() -> RunContext:
     return RunContext(
         run_id=uuid4(),
+        backend_run_id=uuid4(),
         trigger_type="test",
         entity_id=uuid4(),
         entity_type="lead",

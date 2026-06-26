@@ -9,6 +9,7 @@ from app.core.scheduler import scheduler
 from app.schemas.events import AgentEventIn
 from app.services.agent_orchestrator import AgentOrchestrator
 from app.services.autocrm_client import AutoCRMClient
+from app.services.rag_sync_service import RagSyncService
 from app.services.transcription_service import TranscriptionService
 
 
@@ -24,8 +25,17 @@ def _parse_uuid(value: object) -> UUID | None:
 
 def register_jobs(scheduler_instance) -> None:
     scheduler_instance.add_job(_run_daily_summaries, "cron", hour=8, minute=0)
+    scheduler_instance.add_job(_run_lead_score_sweep, "interval", hours=1)
     scheduler_instance.add_job(_run_stale_leads, "interval", hours=6)
     scheduler_instance.add_job(_run_deal_risks, "interval", hours=1)
+    if settings.rag_sync_enabled:
+        scheduler_instance.add_job(
+            _run_rag_sync,
+            "interval",
+            seconds=max(30, settings.rag_sync_interval_seconds),
+            max_instances=1,
+            coalesce=True,
+        )
     scheduler_instance.add_job(
         _run_transcription_stale_sweep,
         "interval",
@@ -50,12 +60,20 @@ def run_stale_leads() -> None:
     _run_coroutine(_run_stale_leads())
 
 
+def run_lead_score_sweep() -> None:
+    _run_coroutine(_run_lead_score_sweep())
+
+
 def run_deal_risks() -> None:
     _run_coroutine(_run_deal_risks())
 
 
 def run_transcription_stale_sweep() -> None:
     _run_coroutine(_run_transcription_stale_sweep())
+
+
+def run_rag_sync() -> None:
+    _run_coroutine(_run_rag_sync())
 
 
 async def _run_daily_summaries() -> None:
@@ -94,6 +112,14 @@ async def _run_stale_leads() -> None:
         await orchestrator.handle_event(payload)
 
 
+async def _run_lead_score_sweep() -> None:
+    try:
+        result = await AutoCRMClient().sweep_lead_scores(limit=100)
+        logger.info("lead_score_sweep_completed result=%s", result)
+    except Exception:
+        logger.exception("lead_score_sweep_failed")
+
+
 async def _run_deal_risks() -> None:
     client = AutoCRMClient()
     orchestrator = AgentOrchestrator()
@@ -119,3 +145,12 @@ async def _run_transcription_stale_sweep() -> None:
             logger.info("transcription_stale_sweep_recovered count=%s", recovered)
     except Exception:
         logger.exception("transcription_stale_sweep_failed")
+
+
+async def _run_rag_sync() -> None:
+    try:
+        indexed = await RagSyncService().run_once()
+        if indexed:
+            logger.info("rag_sync_completed indexed=%s", indexed)
+    except Exception:
+        logger.exception("rag_sync_failed")

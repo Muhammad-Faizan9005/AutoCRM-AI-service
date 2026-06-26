@@ -36,10 +36,18 @@ The service registers APScheduler jobs for:
 
 Jobs emit events into the orchestrator. Update intervals in `app/core/jobs.py`.
 
+## Control Plane
+The AutoCRM backend is the source of truth for agent runs, traces, actions,
+approvals, and CRM records. The AI service creates backend runs with stable
+external IDs, records traces through backend APIs, and dispatches proposed
+actions to `/api/agent/actions` so approval and CRM writes stay centralized.
+
 ## LangGraph + RAG
-Workflows are executed using a simple LangGraph pipeline that gathers context
-and dispatches actions. RAG is an in-memory placeholder and should be swapped
-for FAISS or Pinecone when available.
+Workflows are executed using a LangGraph pipeline that gathers context and
+dispatches actions. RAG uses a persistent FAISS index by default and syncs CRM
+documents from the backend in throttled background batches. Configure
+`VECTOR_STORE=faiss`, `RAG_INDEX_DIR`, `RAG_SYNC_INTERVAL_SECONDS`, and
+`RAG_SYNC_BATCH_SIZE` in `.env`.
 
 ## Ollama
 Set `LLM_PROVIDER=ollama`, `LLM_MODEL_SMALL=gemma2:2b`, and

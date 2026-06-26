@@ -13,18 +13,11 @@ from app.services.action_manager import ActionManager
 def test_action_manager_stores_pending_approval_for_alert(monkeypatch) -> None:
     calls = {}
 
-    async def fake_create_action(self, **kwargs):
-        calls["action"] = kwargs
+    async def fake_backend_create_action(self, action):
+        calls["action"] = action
+        return {"action_id": str(uuid4())}
 
-    async def fake_create_approval(self, **kwargs):
-        calls["approval"] = kwargs
-
-    async def fake_dispatch(self, action):
-        calls["dispatch"] = action
-
-    monkeypatch.setattr(action_module.AgentStore, "create_action", fake_create_action)
-    monkeypatch.setattr(action_module.AgentStore, "create_approval_request", fake_create_approval)
-    monkeypatch.setattr(action_module.AutoCRMClient, "dispatch_action", fake_dispatch)
+    monkeypatch.setattr(action_module.AutoCRMClient, "create_action", fake_backend_create_action)
 
     action = AgentAction(
         action_type="create_alert",
@@ -37,26 +30,19 @@ def test_action_manager_stores_pending_approval_for_alert(monkeypatch) -> None:
 
     asyncio.run(ActionManager().create_action(uuid4(), action))
 
-    assert calls["action"]["approval_status"] == "pending"
-    assert calls["approval"]["fallback_policy"] == "skip"
-    assert calls["dispatch"].action_type == "create_alert"
+    assert calls["action"].approval_status == "pending"
+    assert calls["action"].action_type == "create_alert"
+    assert calls["action"].run_id is not None
 
 
 def test_action_manager_dispatches_auto_approved_task(monkeypatch) -> None:
     calls = {}
 
-    async def fake_create_action(self, **kwargs):
-        calls["action"] = kwargs
+    async def fake_backend_create_action(self, action):
+        calls["action"] = action
+        return {"action_id": str(uuid4())}
 
-    async def fake_create_approval(self, **kwargs):
-        calls["approval"] = kwargs
-
-    async def fake_dispatch(self, action):
-        calls["dispatch"] = action
-
-    monkeypatch.setattr(action_module.AgentStore, "create_action", fake_create_action)
-    monkeypatch.setattr(action_module.AgentStore, "create_approval_request", fake_create_approval)
-    monkeypatch.setattr(action_module.AutoCRMClient, "dispatch_action", fake_dispatch)
+    monkeypatch.setattr(action_module.AutoCRMClient, "create_action", fake_backend_create_action)
 
     action = AgentAction(
         action_type="create_task",
@@ -68,9 +54,8 @@ def test_action_manager_dispatches_auto_approved_task(monkeypatch) -> None:
 
     asyncio.run(ActionManager().create_action(uuid4(), action))
 
-    assert calls["action"]["approval_status"] == "auto_approved"
-    assert calls["dispatch"].action_type == "create_task"
-    assert "approval" not in calls
+    assert calls["action"].approval_status == "auto_approved"
+    assert calls["action"].action_type == "create_task"
 
 
 def test_action_manager_validates_required_payload() -> None:

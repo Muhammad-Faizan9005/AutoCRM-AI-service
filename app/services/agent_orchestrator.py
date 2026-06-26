@@ -149,8 +149,8 @@ class AgentOrchestrator:
             run_context = state.get("run_context")
             if run_context is not None:
                 try:
-                    await self.run_manager.store.create_trace(
-                        run_id=run_context.run_id,
+                    await self.client.create_run_trace(
+                        run_id=run_context.backend_run_id,
                         step="agent_loop",
                         status="failed",
                         payload={"error": str(exc)},
@@ -161,7 +161,7 @@ class AgentOrchestrator:
 
     async def _complete_run(self, state: OrchestrationState) -> OrchestrationState:
         await self.run_manager.complete_run(
-            state["run_context"].run_id,
+            state["run_context"].backend_run_id,
             status="completed",
             summary=f"{state['agent_type']} completed",
         )
@@ -170,7 +170,7 @@ class AgentOrchestrator:
 
     async def _fail_run(self, state: OrchestrationState) -> OrchestrationState:
         await self.run_manager.complete_run(
-            state["run_context"].run_id,
+            state["run_context"].backend_run_id,
             status="failed",
             failure_cause=state.get("failure_cause", "AGENT_ORCHESTRATION_ERROR"),
             failure_detail=state.get("failure_detail"),

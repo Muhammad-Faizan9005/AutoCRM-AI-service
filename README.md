@@ -21,6 +21,22 @@ Use Python 3.11 or 3.12. Python 3.13 will try to build numpy from source and fai
 ## Environment Variables
 See `.env.example` for required settings.
 
+Key groups:
+- Backend API: `AUTOCRM_BACKEND_URL`, `AUTOCRM_AI_AGENT_KEY`, and `AUTOCRM_AI_SERVICE_TOKEN`
+- Protected callbacks: `AI_SERVICE_WEBHOOK_TOKEN`
+- LLM provider: `LLM_PROVIDER`, `LLM_MODEL_SMALL`, `LLM_MODEL_LARGE`, `OLLAMA_BASE_URL`, and optionally `OPENAI_API_KEY`
+- RAG storage: `VECTOR_STORE`, `RAG_INDEX_DIR`, `RAG_SYNC_INTERVAL_SECONDS`, and `RAG_SYNC_BATCH_SIZE`
+- Transcriptions: `TRANSCRIPTION_RECORDINGS_DIR`
+
+Keep real values in `.env` or a secret manager only. Do not commit live DB, backend, AI-service, JWT, provider, or service-account secrets.
+
+## API Security
+
+- `/health` remains a lightweight public liveness endpoint.
+- Configuration, run dispatch, transcription callbacks, and other operational endpoints require `X-AutoCRM-AI-Webhook-Token` when `AI_SERVICE_WEBHOOK_TOKEN` is configured.
+- Calls from this service back into the backend use AI agent credentials when configured. The older email/password login path is retained only as a local-development fallback.
+- Prompt context and transcripts are wrapped as untrusted input before LLM calls, and traces are redacted/truncated before storage.
+
 ## Workflows (v1)
 - Lead follow-up nudges
 - Deal risk alerts
@@ -59,3 +75,6 @@ Model install:
 ollama pull gemma2:2b
 ollama pull glm-4.6:cloud
 ```
+
+## OpenAI
+Set `LLM_PROVIDER=openai` and `OPENAI_API_KEY` to use the OpenAI provider. The service sends bounded JSON requests with configured model names and generation limits.

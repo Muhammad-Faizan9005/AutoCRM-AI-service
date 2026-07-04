@@ -18,7 +18,7 @@ class ActionManager:
         action.approval_status = approval_status
         action.run_id = str(run_id)
         if not action.idempotency_key:
-            action.idempotency_key = f"{run_id}:{action.action_type}:{action.entity_type}:{action.entity_id}"
+            action.idempotency_key = f"{run_id}:{action.action_type}"
         result = await self.client.create_action(action)
         raw_action_id = result.get("action_id") or result.get("id")
         try:

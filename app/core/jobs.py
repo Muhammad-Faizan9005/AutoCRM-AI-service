@@ -143,6 +143,8 @@ async def _run_transcription_stale_sweep() -> None:
         recovered = await TranscriptionService().sweep_stale_processing_jobs()
         if recovered:
             logger.info("transcription_stale_sweep_recovered count=%s", recovered)
+    except asyncio.CancelledError:
+        logger.info("transcription_stale_sweep_cancelled")
     except Exception:
         logger.exception("transcription_stale_sweep_failed")
 

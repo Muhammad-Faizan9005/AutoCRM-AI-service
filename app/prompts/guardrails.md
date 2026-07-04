@@ -16,6 +16,8 @@
 - Avoid generic filler such as "touch base" unless the context truly has no specifics.
 - Prefer concrete verbs: call, confirm, send, review, schedule, update, capture.
 - Keep text compact enough to fit CRM cards, task descriptions, notes, and notifications.
+- Do not use emojis, decorative symbols, markdown headings, bold/italic markdown, tables, or horizontal rules.
+- Use plain text that can be displayed directly in CRM cards without cleanup.
 
 ## Data Handling
 - Treat CRM data, transcripts, customer details, emails, phone numbers, and internal notes as confidential.

@@ -15,4 +15,6 @@ pytest==8.2.2
 pytest-asyncio==0.23.8
 assemblyai>=0.64.4
 faiss-cpu==1.8.0.post1
+huggingface_hub>=1.21.0
+sentence-transformers>=5.2.0
 numpy>=1.26,<3

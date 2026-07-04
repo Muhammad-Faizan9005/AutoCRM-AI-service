@@ -93,6 +93,7 @@ class AgentLoop:
         plan: PlannedAction,
     ) -> AgentAction:
         content = await self._generate_content(payload, context, plan)
+        action_context = self._compact_action_context(context)
         data: dict[str, object]
 
         if plan.action_type == "create_alert":
@@ -100,19 +101,19 @@ class AgentLoop:
                 "title": plan.title or "Deal risk alert",
                 "message": plan.message or content or "Review this CRM item.",
                 "recipient_id": plan.recipient_id or payload.actor_id or "",
-                "context": context,
+                "context": action_context,
             }
         elif plan.action_type == "create_note":
             data = {
                 "title": plan.title or "Agent note",
                 "content": plan.description or content or "Agent note created from CRM event.",
-                "context": context,
+                "context": action_context,
             }
         else:
             data = {
                 "title": plan.title or "Follow up",
                 "description": plan.description or content or "Follow up and capture next steps.",
-                "context": context,
+                "context": action_context,
             }
 
         return AgentAction(
@@ -156,3 +157,33 @@ class AgentLoop:
         if normalized == "user":
             return ["fetch_user", "entity_memory", "rag_retrieve"]
         return ["entity_memory", "rag_retrieve"]
+
+    def _compact_action_context(self, context: dict[str, object]) -> dict[str, object]:
+        snapshot = context.get("entity_snapshot")
+        if isinstance(snapshot, dict):
+            snapshot = {
+                key: value
+                for key, value in snapshot.items()
+                if key in {"id", "name", "title", "status", "stage", "score", "owner_id", "updated_at"} and value is not None
+            }
+        memory = context.get("entity_memory")
+        if isinstance(memory, list):
+            memory = memory[:3]
+        rag_docs = context.get("rag_docs")
+        if isinstance(rag_docs, list):
+            rag_docs = [
+                {
+                    "source": doc.get("source"),
+                    "score": doc.get("score"),
+                    "metadata": doc.get("metadata"),
+                }
+                for doc in rag_docs[:3]
+                if isinstance(doc, dict)
+            ]
+        return {
+            "entity_id": context.get("entity_id"),
+            "entity_type": context.get("entity_type"),
+            "entity_snapshot": snapshot or {},
+            "entity_memory": memory or [],
+            "rag_refs": rag_docs or [],
+        }

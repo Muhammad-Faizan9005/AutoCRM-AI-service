@@ -11,6 +11,7 @@ class Settings(BaseSettings):
 
     autocrm_base_url: str = "http://localhost:8000"
     autocrm_auth_timeout: int = 10
+    autocrm_batch_timeout: int = 60
 
     # New: AI service-to-backend auth (preferred over email/password)
     # Set these after issuing a credential via POST /api/agent/ai-agents/{key}/credentials

@@ -182,7 +182,8 @@ class AutoCRMClient:
     async def sweep_lead_scores(self, limit: int = 100) -> dict[str, object]:
         """Ask AutoCRM backend to recalculate a batch of lead scores."""
         headers = await self.auth.get_async_headers()
-        async with httpx.AsyncClient(timeout=settings.autocrm_auth_timeout, follow_redirects=True) as client:
+        timeout = max(settings.autocrm_auth_timeout, settings.autocrm_batch_timeout)
+        async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
             response = await client.post(
                 f"{settings.autocrm_base_url}/api/agent/leads/score/sweep",
                 params={"limit": limit},

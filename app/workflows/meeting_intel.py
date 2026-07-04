@@ -7,6 +7,7 @@ from app.schemas.events import AgentEventIn
 from app.schemas.actions import AgentAction
 from app.services.run_manager import RunContext
 from app.services.llm_service import LLMService
+from app.services.content_formatter import format_ai_text
 from app.workflows.base import BaseWorkflow
 from app.workflows.graph_runner import GraphRunner
 
@@ -63,7 +64,7 @@ def _clean_summary(value: str) -> str:
     cleaned = (value or "").strip().strip("` ")
     if cleaned.lower().startswith("summary:"):
         cleaned = cleaned.split(":", 1)[1].strip()
-    return cleaned
+    return format_ai_text(cleaned, max_length=1200)
 
 
 def _parse_action_payload(raw: str) -> dict[str, object] | None:

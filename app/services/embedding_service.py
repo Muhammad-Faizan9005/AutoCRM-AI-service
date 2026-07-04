@@ -3,8 +3,7 @@ from __future__ import annotations
 import hashlib
 import math
 import re
-
-import httpx
+import asyncio
 
 from app.config import settings
 
@@ -46,29 +45,42 @@ class HuggingFaceEmbeddingService:
         *,
         api_token: str,
         model: str,
-        base_url: str,
+        base_url: str | None = None,
         timeout: int = 30,
     ) -> None:
         self.api_token = api_token
         self.model = model
-        self.base_url = base_url.rstrip("/")
+        self.base_url = (base_url or "").rstrip("/")
         self.timeout = timeout
+        self._model = None
 
     async def embed(self, text: str) -> list[float]:
         if not self.api_token:
             raise RuntimeError("HUGGINGFACE_API_TOKEN is required for Hugging Face embeddings")
 
-        url = f"{self.base_url}/pipeline/feature-extraction/{self.model}"
-        headers = {"Authorization": f"Bearer {self.api_token}"}
-        payload = {
-            "inputs": text,
-            "options": {"wait_for_model": True},
-        }
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
-            response = await client.post(url, json=payload, headers=headers)
-            response.raise_for_status()
-            data = response.json()
-        return self._normalize(self._mean_pool(data))
+        model = await asyncio.to_thread(self._load_model)
+        embedding = await asyncio.to_thread(
+            model.encode,
+            text,
+            normalize_embeddings=True,
+        )
+        if hasattr(embedding, "tolist"):
+            embedding = embedding.tolist()
+        return self._normalize([float(value) for value in embedding])
+
+    def _load_model(self):
+        if self._model is not None:
+            return self._model
+        try:
+            from sentence_transformers import SentenceTransformer
+        except ImportError as exc:
+            raise RuntimeError(
+                "sentence-transformers is required for Hugging Face embeddings. "
+                "Install AI service requirements first."
+            ) from exc
+
+        self._model = SentenceTransformer(self.model, token=self.api_token)
+        return self._model
 
     def _mean_pool(self, data: object) -> list[float]:
         if self._is_vector(data):

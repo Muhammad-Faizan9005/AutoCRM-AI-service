@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
+from app.api.dependencies import require_webhook_token
 from app.config import settings
 
 
@@ -13,7 +14,7 @@ async def health_check() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@router.get("/config")
+@router.get("/config", dependencies=[Depends(require_webhook_token)])
 async def config_health() -> dict[str, object]:
     llm_configured = bool(settings.llm_enabled and settings.llm_provider and settings.ollama_base_url)
     return {

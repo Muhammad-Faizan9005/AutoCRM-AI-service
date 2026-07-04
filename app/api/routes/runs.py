@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
+from app.api.dependencies import require_webhook_token
 from app.schemas.runs import AgentRunStatus, AgentRunTrace
 from app.services.autocrm_client import AutoCRMClient
 
@@ -11,7 +12,7 @@ from app.services.autocrm_client import AutoCRMClient
 router = APIRouter()
 
 
-@router.get("/runs/{run_id}")
+@router.get("/runs/{run_id}", dependencies=[Depends(require_webhook_token)])
 async def get_run(run_id: str) -> AgentRunStatus:
     run = await AutoCRMClient().get_run(run_id)
     return AgentRunStatus(
@@ -21,7 +22,7 @@ async def get_run(run_id: str) -> AgentRunStatus:
     )
 
 
-@router.get("/runs/{run_id}/trace")
+@router.get("/runs/{run_id}/trace", dependencies=[Depends(require_webhook_token)])
 async def get_run_trace(run_id: UUID) -> list[AgentRunTrace]:
     trace = await AutoCRMClient().list_run_traces(run_id)
     return [AgentRunTrace.model_validate(item) for item in trace]

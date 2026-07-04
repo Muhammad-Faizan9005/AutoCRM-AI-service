@@ -27,7 +27,7 @@ async def recording_ready(payload: RecordingReadyIn, background_tasks: Backgroun
     return RecordingReadyResponse(status="accepted", recording_id=payload.recording_id, job_status=job["status"])
 
 
-@router.get("/{recording_id}", response_model=TranscriptJobOut)
+@router.get("/{recording_id}", response_model=TranscriptJobOut, dependencies=[Depends(require_webhook_token)])
 async def get_transcription_job(recording_id: UUID) -> TranscriptJobOut:
     service = TranscriptionService()
     job = await service.get_job(recording_id)

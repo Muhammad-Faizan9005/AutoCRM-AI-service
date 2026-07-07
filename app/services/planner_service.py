@@ -19,7 +19,8 @@ class PlannerService:
             "Return ONLY JSON with keys: event_meaning, needs_more_context, selected_tool, "
             "action_type, reason, title, description, message, recipient_id, requires_approval. "
             "Choose selected_tool/action_type from create_task, create_note, create_alert. "
-            "Use requires_approval=true for alerts, outbound messages, stage changes, or uncertain/high-risk actions.\n\n"
+            "Use requires_approval=true for AI-created tasks, outbound messages, stage changes, or uncertain/high-risk actions. "
+            "Alerts are informational and should not require approval unless explicitly asked.\n\n"
             f"Event type: {payload.event_type}\n"
             f"Entity type: {payload.entity_type}\n"
             f"Actor id: {payload.actor_id}\n"
@@ -69,7 +70,7 @@ class PlannerService:
                 title="Deal risk alert",
                 message="Deal appears at risk. Review stage progress and next steps.",
                 recipient_id=payload.actor_id or "",
-                requires_approval=True,
+                requires_approval=False,
             )
 
         return PlannedAction(
@@ -79,4 +80,5 @@ class PlannerService:
             reason="No recent activity",
             title="Follow up with lead",
             description="Follow up with the lead and capture next steps.",
+            requires_approval=True,
         )

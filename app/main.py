@@ -1,24 +1,43 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+import logging
 
 from fastapi import FastAPI
 
 from app.api.router import api_router
 from app.config import settings
+from app.core import readiness
 from app.core.logging import configure_logging
 from app.core.scheduler import scheduler
 from app.core.jobs import register_jobs
+from app.core.startup_checks import verify_backend_connectivity
 from app.db.pool import close_pool, init_pool
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     configure_logging(settings.log_level)
+    logger = logging.getLogger(__name__)
     await init_pool()
-    if settings.scheduler_enabled:
+    readiness.mark_database_connected()
+    backend_connected = False
+    try:
+        await verify_backend_connectivity()
+        backend_connected = True
+    except Exception as exc:
+        readiness.mark_not_ready("backend_connectivity_failed", {"error": str(exc)})
+        logger.exception("ai_service_startup_failed")
+        if settings.ai_backend_connectivity_required:
+            await close_pool()
+            raise
+    if settings.scheduler_enabled and backend_connected:
         register_jobs(scheduler)
         scheduler.start()
+        readiness.mark_scheduler_started()
+        logger.info("scheduler_starting")
+    elif backend_connected:
+        readiness.mark_ready("ready_scheduler_disabled")
     yield
     if settings.scheduler_enabled:
         scheduler.shutdown()

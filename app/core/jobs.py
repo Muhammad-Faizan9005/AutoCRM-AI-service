@@ -79,7 +79,7 @@ def run_rag_sync() -> None:
 async def _run_daily_summaries() -> None:
     client = AutoCRMClient()
     orchestrator = AgentOrchestrator()
-    users = await client.list_users()
+    users = await client.list_summary_candidates()
     for user in users:
         user_id = _parse_uuid(user.get("id"))
         if user_id is None:
@@ -97,7 +97,7 @@ async def _run_daily_summaries() -> None:
 async def _run_stale_leads() -> None:
     client = AutoCRMClient()
     orchestrator = AgentOrchestrator()
-    leads = await client.list_leads()
+    leads = await client.list_stale_lead_candidates()
     for lead in leads:
         lead_id = _parse_uuid(lead.get("id"))
         if lead_id is None:
@@ -115,7 +115,7 @@ async def _run_stale_leads() -> None:
 async def _run_lead_score_sweep() -> None:
     try:
         result = await AutoCRMClient().sweep_lead_scores(limit=100)
-        logger.info("lead_score_sweep_completed result=%s", result)
+        logger.info("lead_score_sweep_queued result=%s", result)
     except Exception:
         logger.exception("lead_score_sweep_failed")
 
@@ -123,7 +123,7 @@ async def _run_lead_score_sweep() -> None:
 async def _run_deal_risks() -> None:
     client = AutoCRMClient()
     orchestrator = AgentOrchestrator()
-    deals = await client.list_deals()
+    deals = await client.list_deal_risk_candidates()
     for deal in deals:
         deal_id = _parse_uuid(deal.get("id"))
         if deal_id is None:

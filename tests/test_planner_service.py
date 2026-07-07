@@ -22,6 +22,7 @@ def test_planner_fallback_for_deal_risk() -> None:
 
     assert plan.action_type == "create_alert"
     assert plan.recipient_id == payload.actor_id
+    assert plan.requires_approval is False
 
 
 def test_planner_uses_llm_json(monkeypatch) -> None:

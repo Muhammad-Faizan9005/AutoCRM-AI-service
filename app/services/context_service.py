@@ -70,8 +70,9 @@ class ContextService:
     ) -> dict[str, object]:
         user_snapshot = await self.tools.fetch_entity_snapshot(entity_id=entity_id, entity_type=entity_type)
         user_memory = await self.memory.get_entity_memory(entity_id=entity_id, entity_type=entity_type)
-        owned_leads = await self._owned_items(self.client.list_leads, entity_id)
-        owned_deals = await self._owned_items(self.client.list_deals, entity_id)
+        summary_context = await self.client.get_user_summary_context(entity_id)
+        owned_leads = summary_context.get("owned_leads") if isinstance(summary_context.get("owned_leads"), list) else []
+        owned_deals = summary_context.get("owned_deals") if isinstance(summary_context.get("owned_deals"), list) else []
         retrieval_query = self._build_retrieval_query(
             entity_type=entity_type,
             event_type=event_type,

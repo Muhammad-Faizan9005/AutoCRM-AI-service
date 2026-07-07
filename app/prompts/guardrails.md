@@ -29,4 +29,4 @@
   - For task/nudge workflows: ask the sales rep to verify missing information.
   - For deal risk: ask the manager to review the deal with the owner.
   - For meeting intelligence: return `NO_ACTION_ITEMS`.
-  - For planner JSON: choose `create_note` or `create_task` with `requires_approval=false`, unless the workflow requires alert approval.
+  - For planner JSON: choose `create_note` or `create_alert` with `requires_approval=false` for informational outputs; use `requires_approval=true` for AI-created tasks.

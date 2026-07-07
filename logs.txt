@@ -1,0 +1,25 @@
+INFO:     Will watch for changes in these directories: ['C:\\Users\\HUNAN\\Desktop\\AutoCRM\\AI_service\\Autocrm_AI_system']
+INFO:     Uvicorn running on http://127.0.0.1:8001 (Press CTRL+C to quit)
+INFO:     Started reloader process [17172] using WatchFiles
+INFO:     Started server process [21516]
+INFO:     Waiting for application startup.
+2026-07-08 00:36:14,220 INFO app.core.startup_checks backend_heartbeat_check_started
+2026-07-08 00:36:21,461 INFO httpx HTTP Request: POST http://localhost:8000/api/agent/ai-service/heartbeat "HTTP/1.1 200 OK"
+2026-07-08 00:36:21,463 INFO app.core.startup_checks backend_heartbeat_ok status=ok agent_key=ai_service
+2026-07-08 00:36:21,468 INFO apscheduler.scheduler Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-07-08 00:36:21,469 INFO apscheduler.scheduler Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-07-08 00:36:21,469 INFO apscheduler.scheduler Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-07-08 00:36:21,469 INFO apscheduler.scheduler Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-07-08 00:36:21,469 INFO apscheduler.scheduler Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-07-08 00:36:21,469 INFO apscheduler.scheduler Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-07-08 00:36:21,470 INFO apscheduler.scheduler Added job "_run_daily_summaries" to job store "default"
+2026-07-08 00:36:21,470 INFO apscheduler.scheduler Added job "_run_lead_score_sweep" to job store "default"
+2026-07-08 00:36:21,470 INFO apscheduler.scheduler Added job "_run_stale_leads" to job store "default"
+2026-07-08 00:36:21,471 INFO apscheduler.scheduler Added job "_run_deal_risks" to job store "default"
+2026-07-08 00:36:21,471 INFO apscheduler.scheduler Added job "_run_rag_sync" to job store "default"
+2026-07-08 00:36:21,471 INFO apscheduler.scheduler Added job "_run_transcription_stale_sweep" to job store "default"
+2026-07-08 00:36:21,471 INFO apscheduler.scheduler Scheduler started
+2026-07-08 00:36:21,471 INFO app.main scheduler_starting
+INFO:     Application startup complete.
+2026-07-08 00:41:21,474 INFO apscheduler.executors.default Running job "_run_transcription_stale_sweep (trigger: interval[0:05:00], next run at: 2026-07-08 00:46:21 PKT)" (scheduled at 2026-07-08 00:41:21.469310+05:00)
+2026-07-08 00:41:25,832 INFO apscheduler.executors.default Job "_run_transcription_stale_sweep (trigger: interval[0:05:00], next run at: 2026-07-08 00:46:21 PKT)" executed successfully

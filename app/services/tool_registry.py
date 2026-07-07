@@ -18,9 +18,9 @@ class ToolRegistry:
             {"name": "fetch_lead", "kind": "read", "entity_type": "lead"},
             {"name": "fetch_deal", "kind": "read", "entity_type": "deal"},
             {"name": "fetch_user", "kind": "read", "entity_type": "user"},
-            {"name": "create_task", "kind": "write", "requires_approval": False},
+            {"name": "create_task", "kind": "write", "requires_approval": True},
             {"name": "create_note", "kind": "write", "requires_approval": False},
-            {"name": "create_alert", "kind": "write", "requires_approval": True},
+            {"name": "create_alert", "kind": "write", "requires_approval": False},
         ]
 
     async def execute_read_tool(self, tool_name: str, entity_id: UUID) -> dict[str, object]:

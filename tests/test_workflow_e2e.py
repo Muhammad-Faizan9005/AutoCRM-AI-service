@@ -93,3 +93,4 @@ def test_deal_risk_workflow_sets_alert_recipient(monkeypatch, sample_run_context
 
     assert captured["action"].action_type == "create_alert"
     assert captured["action"].data["recipient_id"] == actor_id
+    assert captured["action"].requires_approval is False

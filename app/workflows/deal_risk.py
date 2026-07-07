@@ -72,7 +72,7 @@ class DealRiskWorkflow(BaseWorkflow):
                     "recipient_id": recipient_id,
                     "context": _compact_context(context),
                 },
-                requires_approval=True,
+                requires_approval=False,
             )
 
         graph = runner.build(make_action)

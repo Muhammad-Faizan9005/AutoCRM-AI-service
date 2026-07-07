@@ -10,7 +10,7 @@ from app.services import action_manager as action_module
 from app.services.action_manager import ActionManager
 
 
-def test_action_manager_stores_pending_approval_for_alert(monkeypatch) -> None:
+def test_action_manager_auto_approves_alert(monkeypatch) -> None:
     calls = {}
 
     async def fake_backend_create_action(self, action):
@@ -25,17 +25,16 @@ def test_action_manager_stores_pending_approval_for_alert(monkeypatch) -> None:
         entity_id=uuid4(),
         reason="Risk",
         data={"title": "Risk", "message": "Review", "recipient_id": str(uuid4())},
-        requires_approval=True,
     )
 
     asyncio.run(ActionManager().create_action(uuid4(), action))
 
-    assert calls["action"].approval_status == "pending"
+    assert calls["action"].approval_status == "auto_approved"
     assert calls["action"].action_type == "create_alert"
     assert calls["action"].run_id is not None
 
 
-def test_action_manager_dispatches_auto_approved_task(monkeypatch) -> None:
+def test_action_manager_stores_pending_approval_for_task(monkeypatch) -> None:
     calls = {}
 
     async def fake_backend_create_action(self, action):
@@ -54,7 +53,7 @@ def test_action_manager_dispatches_auto_approved_task(monkeypatch) -> None:
 
     asyncio.run(ActionManager().create_action(uuid4(), action))
 
-    assert calls["action"].approval_status == "auto_approved"
+    assert calls["action"].approval_status == "pending"
     assert calls["action"].action_type == "create_task"
 
 

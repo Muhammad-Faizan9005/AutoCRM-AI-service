@@ -29,5 +29,5 @@ class ActionManager:
     def _requires_approval(self, action: AgentAction) -> bool:
         if action.requires_approval is True:
             return True
-        high_risk = {"send_email", "update_deal_stage", "update_lead_status"}
+        high_risk = {"create_task", "send_email", "update_deal_stage", "update_lead_status"}
         return action.action_type in high_risk

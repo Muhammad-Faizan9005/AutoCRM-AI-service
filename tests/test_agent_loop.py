@@ -65,7 +65,7 @@ def test_agent_loop_records_full_trace_and_creates_task(monkeypatch, sample_run_
     assert created["action"].data["title"] == "Call lead"
 
 
-def test_agent_loop_marks_deal_alert_for_approval(monkeypatch, sample_run_context) -> None:
+def test_agent_loop_creates_deal_alert_without_approval(monkeypatch, sample_run_context) -> None:
     created = {}
 
     async def fake_context(self, entity_id, entity_type, **kwargs):
@@ -80,7 +80,7 @@ def test_agent_loop_marks_deal_alert_for_approval(monkeypatch, sample_run_contex
             title="Deal risk alert",
             message="Review stalled deal.",
             recipient_id=payload.actor_id,
-            requires_approval=True,
+            requires_approval=False,
         )
 
     async def fake_record(self, run_id, step, *, status="completed", payload=None):
@@ -107,7 +107,7 @@ def test_agent_loop_marks_deal_alert_for_approval(monkeypatch, sample_run_contex
     asyncio.run(AgentLoop().run(payload, sample_run_context))
 
     assert created["action"].action_type == "create_alert"
-    assert created["action"].requires_approval is True
+    assert created["action"].requires_approval is False
     assert created["action"].data["recipient_id"] == actor_id
 
 

@@ -12,14 +12,16 @@ class Settings(BaseSettings):
     autocrm_base_url: str = "http://localhost:8000"
     autocrm_auth_timeout: int = 10
     autocrm_batch_timeout: int = 60
+    ai_backend_connectivity_required: bool = True
 
-    # New: AI service-to-backend auth (preferred over email/password)
-    # Set these after issuing a credential via POST /api/agent/ai-agents/{key}/credentials
-    autocrm_ai_agent_key: str = ""      # e.g. action_manager_agent
+    # AI service-to-backend auth.
+    # Set token after issuing a credential from Profile Settings -> Developer Mode.
+    # Agent key is optional runtime attribution, not the token owner.
+    autocrm_ai_agent_key: str = ""
     autocrm_ai_service_token: str = ""  # raw token returned once on credential creation
     ai_service_webhook_token: str = ""
 
-    # Legacy: email/password login (kept for backward compat; ignored when ai_agent_key is set)
+    # Legacy human-login auth is no longer supported after cookie auth migration.
     autocrm_auth_email: str = ""
     autocrm_auth_password: str = ""
 

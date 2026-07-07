@@ -81,6 +81,7 @@ class LeadNudgeWorkflow(BaseWorkflow):
                 entity_id=event.entity_id,
                 reason=reason,
                 data=data,
+                requires_approval=True,
             )
 
         graph = runner.build(make_action)

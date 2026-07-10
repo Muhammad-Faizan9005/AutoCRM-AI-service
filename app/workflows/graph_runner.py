@@ -100,7 +100,7 @@ class GraphRunner:
                         run_id=run_context.backend_run_id,
                         step="build_action",
                         status="completed",
-                        payload={"decision": "no_action", "reason": "No actionable meeting items were found."},
+                        payload={"decision": "no_action", "reason": "Workflow decided no action was needed."},
                     )
                     return state
 

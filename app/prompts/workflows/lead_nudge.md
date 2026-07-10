@@ -15,6 +15,9 @@ Create a useful follow-up task description for a sales rep when a lead needs att
 - Include the next information to capture: timeline, decision maker, need, budget, blocker, or preferred channel.
 - Do not write a greeting or email body.
 - Do not mention implementation details.
+- Do not invent urgency, a deadline, or customer intent.
+- Do not repeat a previous AI task if entity_memory shows the same open recommendation.
+- If context is thin, make the task about verifying current interest and capturing missing CRM fields.
 
 ## Good Output Shape
 `Follow up with the lead about [specific context]. Confirm [missing decision/timeline/blocker] and record the next step.`

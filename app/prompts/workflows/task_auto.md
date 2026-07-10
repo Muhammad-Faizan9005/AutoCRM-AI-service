@@ -14,6 +14,8 @@ Draft a short CRM task description for an automatically generated next step.
 - Include the reason or evidence when available.
 - Do not duplicate an existing open task if context shows one already exists.
 - Do not create outbound-message wording; describe the task only.
+- Do not set or imply a due date unless the provided context contains one.
+- Do not assign blame or say the customer was neglected; describe the operational next step.
 
 ## Good Output Shape
 `Complete [specific next step] for [lead/deal/customer] and update CRM with [missing detail].`

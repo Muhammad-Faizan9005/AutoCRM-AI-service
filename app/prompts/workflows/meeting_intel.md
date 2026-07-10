@@ -35,6 +35,7 @@ Use exactly these keys:
 - Use ISO 8601 format.
 - For relative/local meeting times, use timezone `+05:00`.
 - If no deadline is clear, use `null`.
+- Do not infer dates from vague phrases such as "soon", "later", or "next time".
 
 ## Priority Rules
 - `high`: deadline, escalation, customer blocker, commercial commitment, or urgent follow-up.
@@ -45,3 +46,5 @@ Use exactly these keys:
 - Do not invent due dates, products, quantities, or customer commitments.
 - Keep `task_description` short enough for a task card.
 - Put verbose details in `note_content`, not `task_description`.
+- Keep `title` imperative and human-readable, not a transcript fragment.
+- If the action is customer-facing, describe what the rep should do; do not write the customer message.

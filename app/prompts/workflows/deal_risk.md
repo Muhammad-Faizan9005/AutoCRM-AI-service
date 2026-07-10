@@ -14,6 +14,9 @@ Write a manager-facing risk alert for a deal that may need intervention.
 - If the owner or next step is known, mention it.
 - Avoid certainty unless the context supports it.
 - Do not blame a rep or customer.
+- Do not recommend changing the deal stage directly.
+- Do not invent a close date, blocker, buyer, or next step.
+- If a task is overdue or missing, describe it as an internal follow-up risk.
 
 ## Good Output Shape
 `Deal risk: [specific signal]. Ask the owner to review [blocker/next step] and update the close plan.`

@@ -116,7 +116,7 @@ class RagSyncService:
             except Exception:
                 logger.exception("rag_sync_failed")
             try:
-                await asyncio.wait_for(stop_event.wait(), timeout=max(30, settings.rag_sync_interval_seconds))
+                await asyncio.wait_for(stop_event.wait(), timeout=max(1, settings.rag_sync_interval_hours) * 3600)
             except asyncio.TimeoutError:
                 pass
 

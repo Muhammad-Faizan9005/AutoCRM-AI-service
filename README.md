@@ -25,7 +25,7 @@ Key groups:
 - Backend API: `AUTOCRM_BACKEND_URL`, `AUTOCRM_AI_AGENT_KEY`, and `AUTOCRM_AI_SERVICE_TOKEN`
 - Protected callbacks: `AI_SERVICE_WEBHOOK_TOKEN`
 - LLM provider: `LLM_PROVIDER`, `LLM_MODEL_SMALL`, `LLM_MODEL_LARGE`, `OLLAMA_BASE_URL`, and optionally `OPENAI_API_KEY`
-- RAG storage: `VECTOR_STORE`, `RAG_INDEX_DIR`, `RAG_SYNC_INTERVAL_SECONDS`, and `RAG_SYNC_BATCH_SIZE`
+- RAG storage: `VECTOR_STORE`, `RAG_INDEX_DIR`, `RAG_SYNC_INTERVAL_HOURS`, and `RAG_SYNC_BATCH_SIZE`
 - Transcriptions: `TRANSCRIPTION_RECORDINGS_DIR`
 
 Keep real values in `.env` or a secret manager only. Do not commit live DB, backend, AI-service, JWT, provider, or service-account secrets.
@@ -48,9 +48,9 @@ Keep real values in `.env` or a secret manager only. Do not commit live DB, back
 The service registers APScheduler jobs for:
 - `daily_summary` (cron at 08:00)
 - `stale_lead` (every 6 hours)
-- `deal_risk` (hourly)
+- `deal_risk` (every 6 hours)
 
-Jobs emit events into the orchestrator. Update intervals in `app/core/jobs.py`.
+Jobs emit events into the orchestrator. Update intervals in `app/config.py`.
 
 ## Control Plane
 The AutoCRM backend is the source of truth for agent runs, traces, actions,
@@ -62,7 +62,7 @@ actions to `/api/agent/actions` so approval and CRM writes stay centralized.
 Workflows are executed using a LangGraph pipeline that gathers context and
 dispatches actions. RAG uses a persistent FAISS index by default and syncs CRM
 documents from the backend in throttled background batches. Configure
-`VECTOR_STORE=faiss`, `RAG_INDEX_DIR`, `RAG_SYNC_INTERVAL_SECONDS`, and
+`VECTOR_STORE=faiss`, `RAG_INDEX_DIR`, `RAG_SYNC_INTERVAL_HOURS`, and
 `RAG_SYNC_BATCH_SIZE` in `.env`.
 
 ## Ollama

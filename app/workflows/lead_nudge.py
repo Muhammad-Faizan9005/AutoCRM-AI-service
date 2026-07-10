@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
+
+from app.config import settings
 from app.schemas.events import AgentEventIn
 from app.schemas.actions import AgentAction
 from app.services.planner_service import PlannerService
@@ -42,13 +45,48 @@ def _bounded_text(value: object, fallback: str, limit: int) -> str:
     return text[:limit].rstrip()
 
 
+def _parse_datetime(value: object) -> datetime | None:
+    if isinstance(value, datetime):
+        return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+
+
+def _recent_ai_task_exists(context: dict[str, object]) -> bool:
+    cooldown_hours = max(0, settings.lead_nudge_task_cooldown_hours)
+    if cooldown_hours == 0:
+        return False
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=cooldown_hours)
+    memory = context.get("entity_memory") if isinstance(context, dict) else []
+    for item in memory if isinstance(memory, list) else []:
+        if not isinstance(item, dict):
+            continue
+        if str(item.get("action_type") or "").strip().lower() != "create_task":
+            continue
+        if str(item.get("approval_status") or "").strip().lower() == "rejected":
+            continue
+        created_at = _parse_datetime(item.get("created_at"))
+        if created_at is None or created_at >= cutoff:
+            return True
+    return False
+
+
 class LeadNudgeWorkflow(BaseWorkflow):
     async def run(self, payload: AgentEventIn, run_context: RunContext) -> None:
         runner = GraphRunner()
         llm = LLMService()
         planner = PlannerService()
 
-        async def make_action(event: AgentEventIn, context: dict[str, object]) -> AgentAction:
+        async def make_action(event: AgentEventIn, context: dict[str, object]) -> AgentAction | None:
+            if _recent_ai_task_exists(context):
+                return None
+
             plan = await planner.plan_action(event, context)
             content = ""
             prompt = (

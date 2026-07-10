@@ -158,6 +158,44 @@ class AutoCRMClient:
     async def list_deal_risk_candidates(self, limit: int = 500) -> list[dict[str, object]]:
         return await self._get_list(f"/api/agent/deals/risk-candidates?limit={limit}")
 
+    async def list_task_deadline_candidates(self, limit: int = 100) -> list[dict[str, object]]:
+        headers = await self.auth.get_async_headers()
+        async with httpx.AsyncClient(timeout=settings.autocrm_auth_timeout, follow_redirects=True) as client:
+            response = await client.get(
+                f"{settings.autocrm_base_url}/api/agent/tasks/deadline-candidates",
+                params={"limit": limit},
+                headers=headers,
+            )
+            response.raise_for_status()
+            data = response.json()
+            if isinstance(data, dict) and isinstance(data.get("items"), list):
+                return data["items"]
+            return []
+
+    async def run_task_deadline_sweep(self, limit: int = 100) -> dict[str, object]:
+        headers = await self.auth.get_async_headers()
+        async with httpx.AsyncClient(timeout=settings.autocrm_auth_timeout, follow_redirects=True) as client:
+            response = await client.post(
+                f"{settings.autocrm_base_url}/api/agent/tasks/deadline-sweep",
+                params={"limit": limit},
+                headers=headers,
+            )
+            response.raise_for_status()
+            data = response.json()
+            return data if isinstance(data, dict) else {}
+
+    async def record_task_deadline_alert(self, payload: dict[str, object]) -> dict[str, object]:
+        headers = await self.auth.get_async_headers()
+        async with httpx.AsyncClient(timeout=settings.autocrm_auth_timeout, follow_redirects=True) as client:
+            response = await client.post(
+                f"{settings.autocrm_base_url}/api/agent/tasks/deadline-alerts",
+                json=payload,
+                headers=headers,
+            )
+            response.raise_for_status()
+            data = response.json()
+            return data if isinstance(data, dict) else {}
+
     async def list_summary_candidates(self, limit: int = 500) -> list[dict[str, object]]:
         return await self._get_list(f"/api/agent/users/summary-candidates?limit={limit}")
 

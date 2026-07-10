@@ -6,6 +6,7 @@ from app.workflows.daily_summary import DailySummaryWorkflow
 from app.workflows.lead_nudge import LeadNudgeWorkflow
 from app.workflows.meeting_intel import MeetingIntelWorkflow
 from app.workflows.task_auto import TaskAutoWorkflow
+from app.workflows.task_deadline_watch import TaskDeadlineWatchWorkflow
 
 
 class WorkflowRouter:
@@ -18,6 +19,8 @@ class WorkflowRouter:
             return DailySummaryWorkflow()
         if payload.event_type == "task_auto":
             return TaskAutoWorkflow()
+        if payload.event_type == "task_deadline_watch":
+            return TaskDeadlineWatchWorkflow()
         if payload.event_type == "meeting_complete":
             return MeetingIntelWorkflow()
         return None

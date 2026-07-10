@@ -24,15 +24,37 @@ def _parse_uuid(value: object) -> UUID | None:
 
 
 def register_jobs(scheduler_instance) -> None:
-    scheduler_instance.add_job(_run_daily_summaries, "cron", hour=8, minute=0)
-    scheduler_instance.add_job(_run_lead_score_sweep, "interval", hours=1)
-    scheduler_instance.add_job(_run_stale_leads, "interval", hours=6)
-    scheduler_instance.add_job(_run_deal_risks, "interval", hours=1)
+    scheduler_instance.add_job(
+        _run_daily_summaries,
+        "cron",
+        hour=settings.scheduler_daily_summary_hour,
+        minute=settings.scheduler_daily_summary_minute,
+    )
+    scheduler_instance.add_job(
+        _run_lead_score_sweep,
+        "interval",
+        hours=max(1, settings.scheduler_lead_score_sweep_interval_hours),
+    )
+    scheduler_instance.add_job(
+        _run_stale_leads,
+        "interval",
+        hours=max(1, settings.scheduler_stale_lead_sweep_interval_hours),
+    )
+    scheduler_instance.add_job(
+        _run_deal_risks,
+        "interval",
+        hours=max(1, settings.scheduler_deal_risk_sweep_interval_hours),
+    )
+    scheduler_instance.add_job(
+        _run_task_deadline_watch,
+        "interval",
+        minutes=max(15, settings.scheduler_task_deadline_sweep_interval_minutes),
+    )
     if settings.rag_sync_enabled:
         scheduler_instance.add_job(
             _run_rag_sync,
             "interval",
-            seconds=max(30, settings.rag_sync_interval_seconds),
+            hours=max(1, settings.rag_sync_interval_hours),
             max_instances=1,
             coalesce=True,
         )
@@ -68,6 +90,10 @@ def run_deal_risks() -> None:
     _run_coroutine(_run_deal_risks())
 
 
+def run_task_deadline_watch() -> None:
+    _run_coroutine(_run_task_deadline_watch())
+
+
 def run_transcription_stale_sweep() -> None:
     _run_coroutine(_run_transcription_stale_sweep())
 
@@ -79,7 +105,7 @@ def run_rag_sync() -> None:
 async def _run_daily_summaries() -> None:
     client = AutoCRMClient()
     orchestrator = AgentOrchestrator()
-    users = await client.list_summary_candidates()
+    users = await client.list_summary_candidates(limit=settings.scheduler_summary_candidate_limit)
     for user in users:
         user_id = _parse_uuid(user.get("id"))
         if user_id is None:
@@ -97,7 +123,7 @@ async def _run_daily_summaries() -> None:
 async def _run_stale_leads() -> None:
     client = AutoCRMClient()
     orchestrator = AgentOrchestrator()
-    leads = await client.list_stale_lead_candidates()
+    leads = await client.list_stale_lead_candidates(limit=settings.scheduler_stale_lead_candidate_limit)
     for lead in leads:
         lead_id = _parse_uuid(lead.get("id"))
         if lead_id is None:
@@ -123,7 +149,7 @@ async def _run_lead_score_sweep() -> None:
 async def _run_deal_risks() -> None:
     client = AutoCRMClient()
     orchestrator = AgentOrchestrator()
-    deals = await client.list_deal_risk_candidates()
+    deals = await client.list_deal_risk_candidates(limit=settings.scheduler_deal_risk_candidate_limit)
     for deal in deals:
         deal_id = _parse_uuid(deal.get("id"))
         if deal_id is None:
@@ -134,6 +160,32 @@ async def _run_deal_risks() -> None:
             entity_type="deal",
             actor_id=str(deal.get("owner_id") or ""),
             metadata={"source": "scheduler"},
+        )
+        await orchestrator.handle_event(payload)
+
+
+async def _run_task_deadline_watch() -> None:
+    client = AutoCRMClient()
+    orchestrator = AgentOrchestrator()
+    try:
+        result = await client.run_task_deadline_sweep(limit=settings.scheduler_task_deadline_candidate_limit)
+        logger.info("task_deadline_rule_sweep result=%s", result)
+    except Exception:
+        logger.exception("task_deadline_rule_sweep_failed")
+
+    candidates = await client.list_task_deadline_candidates(limit=settings.scheduler_task_deadline_candidate_limit)
+    for candidate in candidates:
+        if not candidate.get("should_use_llm") or candidate.get("fresh_llm_output"):
+            continue
+        task_id = _parse_uuid(candidate.get("task_id"))
+        if task_id is None:
+            continue
+        payload = AgentEventIn(
+            event_type="task_deadline_watch",
+            entity_id=task_id,
+            entity_type="task",
+            actor_id=str(candidate.get("assigned_to") or candidate.get("owner_id") or ""),
+            metadata={**candidate, "source": "scheduler"},
         )
         await orchestrator.handle_event(payload)
 

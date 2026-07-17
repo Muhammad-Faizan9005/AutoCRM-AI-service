@@ -11,7 +11,7 @@ from app.core import readiness
 from app.core.logging import configure_logging
 from app.core.scheduler import scheduler
 from app.core.jobs import register_jobs
-from app.core.startup_checks import verify_backend_connectivity
+from app.core.startup_checks import verify_backend_connectivity, verify_security_config
 from app.db.pool import close_pool, init_pool
 
 
@@ -21,6 +21,15 @@ async def lifespan(app: FastAPI):
     logger = logging.getLogger(__name__)
     await init_pool()
     readiness.mark_database_connected()
+
+    # Issue #5 — fail-fast if webhook token is missing outside dev
+    try:
+        await verify_security_config()
+    except Exception as exc:
+        logger.error("security_config_check_failed: %s", exc)
+        await close_pool()
+        raise
+
     backend_connected = False
     try:
         await verify_backend_connectivity()

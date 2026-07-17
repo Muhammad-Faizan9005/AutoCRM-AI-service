@@ -174,7 +174,8 @@ class AutoCRMClient:
 
     async def run_task_deadline_sweep(self, limit: int = 100) -> dict[str, object]:
         headers = await self.auth.get_async_headers()
-        async with httpx.AsyncClient(timeout=settings.autocrm_auth_timeout, follow_redirects=True) as client:
+        timeout = max(settings.autocrm_auth_timeout, settings.autocrm_batch_timeout)
+        async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
             response = await client.post(
                 f"{settings.autocrm_base_url}/api/agent/tasks/deadline-sweep",
                 params={"limit": limit},

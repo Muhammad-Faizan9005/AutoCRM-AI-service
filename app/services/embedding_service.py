@@ -4,8 +4,13 @@ import hashlib
 import math
 import re
 import asyncio
+import threading
 
 from app.config import settings
+
+
+_MODEL_CACHE: dict[tuple[str, str], object] = {}
+_MODEL_CACHE_LOCK = threading.Lock()
 
 
 class EmbeddingService:
@@ -71,6 +76,24 @@ class HuggingFaceEmbeddingService:
     def _load_model(self):
         if self._model is not None:
             return self._model
+        cache_key = (self.model, self.api_token)
+        cached_model = _MODEL_CACHE.get(cache_key)
+        if cached_model is not None:
+            self._model = cached_model
+            return cached_model
+
+        with _MODEL_CACHE_LOCK:
+            cached_model = _MODEL_CACHE.get(cache_key)
+            if cached_model is not None:
+                self._model = cached_model
+                return cached_model
+
+            model = self._build_model()
+            _MODEL_CACHE[cache_key] = model
+            self._model = model
+            return model
+
+    def _build_model(self):
         try:
             from sentence_transformers import SentenceTransformer
         except ImportError as exc:
@@ -79,8 +102,7 @@ class HuggingFaceEmbeddingService:
                 "Install AI service requirements first."
             ) from exc
 
-        self._model = SentenceTransformer(self.model, token=self.api_token)
-        return self._model
+        return SentenceTransformer(self.model, token=self.api_token)
 
     def _mean_pool(self, data: object) -> list[float]:
         if self._is_vector(data):

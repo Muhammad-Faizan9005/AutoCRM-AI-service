@@ -14,6 +14,10 @@ _SENSITIVE_KEYS = {
     "recording_path",
     "transcript",
     "transcript_text",
+    "email",
+    "phone",
+    "recording_url",
+    "assemblyai_transcript_id",
 }
 _MAX_STRING_LENGTH = 600
 _MAX_LIST_ITEMS = 5

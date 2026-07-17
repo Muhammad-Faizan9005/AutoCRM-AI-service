@@ -63,6 +63,13 @@ def register_jobs(scheduler_instance) -> None:
         "interval",
         minutes=max(1, settings.transcription_stale_sweep_interval_minutes),
     )
+    # Issue #6 — scheduled trace retention sweep
+    scheduler_instance.add_job(
+        _run_trace_retention_sweep,
+        "cron",
+        hour=0,
+        minute=30,
+    )
 
 
 def _run_coroutine(coro) -> None:
@@ -208,3 +215,22 @@ async def _run_rag_sync() -> None:
             logger.info("rag_sync_completed indexed=%s", indexed)
     except Exception:
         logger.exception("rag_sync_failed")
+
+
+async def _run_trace_retention_sweep() -> None:
+    """Delete ai_run_traces older than the configured retention period (Issue #6)."""
+    from app.db.pool import get_pool
+
+    retention_days = settings.ai_trace_retention_days
+    try:
+        pool = get_pool()
+        result = await pool.execute(
+            """
+            DELETE FROM ai_run_traces
+            WHERE created_at < NOW() - ($1::int * INTERVAL '1 day')
+            """,
+            retention_days,
+        )
+        logger.info("trace_retention_sweep_completed retention_days=%d result=%s", retention_days, result)
+    except Exception:
+        logger.exception("trace_retention_sweep_failed")

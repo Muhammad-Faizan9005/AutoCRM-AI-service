@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import logging
 from uuid import UUID
 
+from app.core.metrics import content_generation_failures_total
+from app.core.retry import classify_failure
 from app.schemas.actions import AgentAction
 from app.schemas.events import AgentEventIn
 from app.schemas.planner import PlannedAction
@@ -12,6 +15,8 @@ from app.services.planner_service import PlannerService
 from app.services.run_manager import RunContext
 from app.services.run_trace_service import RunTraceService
 from app.services.tool_registry import ToolRegistry
+
+logger = logging.getLogger(__name__)
 
 
 class AgentLoop:
@@ -145,8 +150,17 @@ class AgentLoop:
                 model_tier="large" if payload.event_type == "deal_risk" else "small",
                 prompt="",
             )
-        except Exception:
-            return ""
+        except Exception as exc:
+            # Increment metrics and let the exception propagate to the
+            # orchestrator's _execute_agent_loop, which marks the run failed.
+            category = classify_failure(exc)
+            content_generation_failures_total.inc(category=category)
+            logger.exception(
+                "content_generation_failed category=%s workflow=%s",
+                category,
+                workflow,
+            )
+            raise
 
     def _read_tools_for(self, entity_type: str) -> list[str]:
         normalized = entity_type.strip().lower()

@@ -27,6 +27,10 @@ class TranscriptionService:
         global _schema_ready
         if _schema_ready:
             return
+        # In non-dev, the service relies on the Alembic migration (Issue #2).
+        if not settings.should_ensure_transcription_schema:
+            _schema_ready = True
+            return
         async with _schema_lock:
             if _schema_ready:
                 return
@@ -362,9 +366,12 @@ class TranscriptionService:
             "</untrusted_transcript>"
         )
         try:
+            # LLMService.generate already uses retry_async internally
             summary = await LLMService().generate(prompt=prompt, workflow=None, context="", model_tier="small")
             return format_ai_text(summary, max_length=1200)
         except Exception:
+            # Keep human-facing fallback BUT log the error (Issue #1g)
+            logger.exception("meeting_summary_generation_failed")
             return "Meeting summary could not be generated automatically."
 
     async def _complete_job(self, recording_id: UUID, transcript: dict[str, str | None], meeting_summary: str = "") -> None:
@@ -494,7 +501,7 @@ class TranscriptionService:
                 status,
             )
         except Exception:
-            logger.debug("call_sessions status update skipped", exc_info=True)
+            logger.warning("call_sessions status update skipped", exc_info=True)
 
     async def _update_call_session_transcript(self, recording_id: UUID, transcript_text: str, meeting_summary: str = "") -> None:
         try:
@@ -509,7 +516,7 @@ class TranscriptionService:
                 meeting_summary,
             )
         except Exception:
-            logger.debug("call_sessions transcript update skipped", exc_info=True)
+            logger.warning("call_sessions transcript update skipped", exc_info=True)
 
     def _json(self, value: dict[str, Any]) -> str:
         import json

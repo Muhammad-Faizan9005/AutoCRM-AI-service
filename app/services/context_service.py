@@ -73,6 +73,8 @@ class ContextService:
         summary_context = await self.client.get_user_summary_context(entity_id)
         owned_leads = summary_context.get("owned_leads") if isinstance(summary_context.get("owned_leads"), list) else []
         owned_deals = summary_context.get("owned_deals") if isinstance(summary_context.get("owned_deals"), list) else []
+        tasks = summary_context.get("tasks") if isinstance(summary_context.get("tasks"), list) else []
+        scope = str(summary_context.get("scope") or "owned")
         retrieval_query = self._build_retrieval_query(
             entity_type=entity_type,
             event_type=event_type,
@@ -96,11 +98,13 @@ class ContextService:
         return {
             "entity_id": entity_id,
             "entity_type": entity_type,
+            "scope": scope,
             "retrieval_query": retrieval_query,
             "entity_snapshot": user_snapshot,
             "entity_memory": user_memory,
             "owned_leads": self._compact_items(owned_leads, limit=20),
             "owned_deals": self._compact_items(owned_deals, limit=20),
+            "tasks": self._compact_items(tasks, limit=20),
             "rag_docs": self._budget_rag_docs(rag_docs, max_docs=10, max_content_chars=700),
         }
 
@@ -136,6 +140,8 @@ class ContextService:
                         "score_reason",
                         "value",
                         "expected_close_at",
+                        "due_at",
+                        "priority",
                         "updated_at",
                     }
                     and value is not None

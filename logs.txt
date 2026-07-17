@@ -1,0 +1,47 @@
+INFO:     Will watch for changes in these directories: ['C:\\Users\\HUNAN\\Desktop\\AutoCRM\\AI_service\\Autocrm_AI_system']
+INFO:     Uvicorn running on http://127.0.0.1:8001 (Press CTRL+C to quit)
+INFO:     Started reloader process [11388] using WatchFiles
+INFO:     Started server process [9096]
+INFO:     Waiting for application startup.
+2026-07-14 19:29:55,804 INFO app.core.startup_checks backend_heartbeat_check_started
+2026-07-14 19:30:04,090 INFO httpx HTTP Request: POST http://localhost:8000/api/agent/ai-service/heartbeat "HTTP/1.1 200 OK"
+2026-07-14 19:30:04,091 INFO app.core.startup_checks backend_heartbeat_ok status=ok agent_key=ai_service
+2026-07-14 19:30:04,096 INFO apscheduler.scheduler Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-07-14 19:30:04,098 INFO apscheduler.scheduler Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-07-14 19:30:04,098 INFO apscheduler.scheduler Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-07-14 19:30:04,098 INFO apscheduler.scheduler Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-07-14 19:30:04,098 INFO apscheduler.scheduler Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-07-14 19:30:04,098 INFO apscheduler.scheduler Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-07-14 19:30:04,098 INFO apscheduler.scheduler Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-07-14 19:30:04,101 INFO apscheduler.scheduler Added job "_run_daily_summaries" to job store "default"
+2026-07-14 19:30:04,101 INFO apscheduler.scheduler Added job "_run_lead_score_sweep" to job store "default"
+2026-07-14 19:30:04,101 INFO apscheduler.scheduler Added job "_run_stale_leads" to job store "default"
+2026-07-14 19:30:04,102 INFO apscheduler.scheduler Added job "_run_deal_risks" to job store "default"
+2026-07-14 19:30:04,102 INFO apscheduler.scheduler Added job "_run_task_deadline_watch" to job store "default"
+2026-07-14 19:30:04,102 INFO apscheduler.scheduler Added job "_run_rag_sync" to job store "default"
+2026-07-14 19:30:04,102 INFO apscheduler.scheduler Added job "_run_transcription_stale_sweep" to job store "default"
+2026-07-14 19:30:04,102 INFO apscheduler.scheduler Scheduler started
+2026-07-14 19:30:04,102 INFO app.main scheduler_starting
+INFO:     Application startup complete.
+2026-07-14 20:00:04,108 INFO apscheduler.executors.default Running job "_run_transcription_stale_sweep (trigger: interval[0:30:00], next run at: 2026-07-14 20:30:04 PKT)" (scheduled at 2026-07-14 20:00:04.098855+05:00)
+2026-07-14 20:00:08,411 INFO apscheduler.executors.default Job "_run_transcription_stale_sweep (trigger: interval[0:30:00], next run at: 2026-07-14 20:30:04 PKT)" executed successfully
+2026-07-14 20:30:04,123 INFO apscheduler.executors.default Running job "_run_transcription_stale_sweep (trigger: interval[0:30:00], next run at: 2026-07-14 21:00:04 PKT)" (scheduled at 2026-07-14 20:30:04.098855+05:00)
+2026-07-14 20:30:04,125 INFO apscheduler.executors.default Running job "_run_task_deadline_watch (trigger: interval[1:00:00], next run at: 2026-07-14 21:30:04 PKT)" (scheduled at 2026-07-14 20:30:04.098855+05:00)
+2026-07-14 20:30:04,201 INFO faiss.loader Loading faiss with AVX2 support.
+2026-07-14 20:30:04,586 INFO faiss.loader Successfully loaded faiss with AVX2 support.
+2026-07-14 20:30:06,727 INFO apscheduler.executors.default Job "_run_transcription_stale_sweep (trigger: interval[0:30:00], next run at: 2026-07-14 21:00:04 PKT)" executed successfully
+2026-07-14 20:30:09,375 INFO httpx HTTP Request: POST http://localhost:8000/api/agent/tasks/deadline-sweep?limit=100 "HTTP/1.1 202 Accepted"
+2026-07-14 20:30:09,379 INFO app.core.jobs task_deadline_rule_sweep result={'status': 'queued', 'limit': 100}
+2026-07-14 20:30:12,624 INFO httpx HTTP Request: GET http://localhost:8000/api/agent/tasks/deadline-candidates?limit=100 "HTTP/1.1 200 OK"
+2026-07-14 20:30:12,625 INFO apscheduler.executors.default Job "_run_task_deadline_watch (trigger: interval[1:00:00], next run at: 2026-07-14 21:30:04 PKT)" executed successfully
+2026-07-14 21:00:04,114 INFO apscheduler.executors.default Running job "_run_transcription_stale_sweep (trigger: interval[0:30:00], next run at: 2026-07-14 21:30:04 PKT)" (scheduled at 2026-07-14 21:00:04.098855+05:00)
+2026-07-14 21:00:05,929 INFO apscheduler.executors.default Job "_run_transcription_stale_sweep (trigger: interval[0:30:00], next run at: 2026-07-14 21:30:04 PKT)" executed successfully
+2026-07-14 21:30:04,112 INFO apscheduler.executors.default Running job "_run_transcription_stale_sweep (trigger: interval[0:30:00], next run at: 2026-07-14 22:00:04 PKT)" (scheduled at 2026-07-14 21:30:04.098855+05:00)
+2026-07-14 21:30:04,114 INFO apscheduler.executors.default Running job "_run_task_deadline_watch (trigger: interval[1:00:00], next run at: 2026-07-14 22:30:04 PKT)" (scheduled at 2026-07-14 21:30:04.098855+05:00)
+2026-07-14 21:30:06,304 INFO apscheduler.executors.default Job "_run_transcription_stale_sweep (trigger: interval[0:30:00], next run at: 2026-07-14 22:00:04 PKT)" executed successfully
+2026-07-14 21:30:06,382 INFO httpx HTTP Request: POST http://localhost:8000/api/agent/tasks/deadline-sweep?limit=100 "HTTP/1.1 202 Accepted"
+2026-07-14 21:30:06,383 INFO app.core.jobs task_deadline_rule_sweep result={'status': 'queued', 'limit': 100}
+2026-07-14 21:30:09,684 INFO httpx HTTP Request: GET http://localhost:8000/api/agent/tasks/deadline-candidates?limit=100 "HTTP/1.1 200 OK"
+2026-07-14 21:30:09,685 INFO apscheduler.executors.default Job "_run_task_deadline_watch (trigger: interval[1:00:00], next run at: 2026-07-14 22:30:04 PKT)" executed successfully
+2026-07-14 22:00:04,112 INFO apscheduler.executors.default Running job "_run_transcription_stale_sweep (trigger: interval[0:30:00], next run at: 2026-07-14 22:30:04 PKT)" (scheduled at 2026-07-14 22:00:04.098855+05:00)
+2026-07-14 22:00:06,179 INFO apscheduler.executors.default Job "_run_transcription_stale_sweep (trigger: interval[0:30:00], next run at: 2026-07-14 22:30:04 PKT)" executed successfully

@@ -5,6 +5,9 @@ from typing import Literal, TypedDict
 
 from langgraph.graph import END, StateGraph
 
+from app.config import settings
+from app.core.correlation import new_correlation_id, set_correlation_id, set_run_id
+from app.core.retry import classify_failure
 from app.schemas.events import AgentEventIn
 from app.services.agent_loop import AgentLoop
 from app.services.autocrm_client import AutoCRMClient
@@ -69,6 +72,15 @@ class AgentOrchestrator:
         self.graph = self._build_graph()
 
     async def handle_event(self, payload: AgentEventIn) -> None:
+        # Create and set a correlation ID at event ingress
+        correlation_id = new_correlation_id()
+        set_correlation_id(correlation_id)
+        logger.info(
+            "event_ingress event_type=%s entity_id=%s correlation_id=%s",
+            payload.event_type,
+            payload.entity_id,
+            correlation_id,
+        )
         await self.graph.ainvoke({"payload": payload})
 
     def _build_graph(self):
@@ -131,6 +143,9 @@ class AgentOrchestrator:
             state["outcome"] = "duplicate"
             return state
 
+        # Set run_id in context vars for logging
+        set_run_id(str(run_context.backend_run_id))
+
         state["run_context"] = run_context
         state["outcome"] = "accepted"
         return state
@@ -146,8 +161,18 @@ class AgentOrchestrator:
             state["outcome"] = "executed"
         except Exception as exc:
             state["outcome"] = "failed"
-            state["failure_cause"] = "AGENT_LOOP_ERROR"
-            state["failure_detail"] = str(exc)
+            # Use structured failure category from the central classifier
+            state["failure_cause"] = classify_failure(exc)
+            # Gate failure detail behind dev mode
+            if settings.is_dev:
+                state["failure_detail"] = str(exc)
+            else:
+                state["failure_detail"] = "An internal error occurred. Check service logs for details."
+            # Always log the full error with correlation context
+            logger.exception(
+                "agent_loop_failed failure_cause=%s",
+                state["failure_cause"],
+            )
             run_context = state.get("run_context")
             if run_context is not None:
                 try:
@@ -155,7 +180,10 @@ class AgentOrchestrator:
                         run_id=run_context.backend_run_id,
                         step="agent_loop",
                         status="failed",
-                        payload={"error": str(exc)},
+                        payload={
+                            "error": state["failure_detail"],
+                            "failure_cause": state["failure_cause"],
+                        },
                     )
                 except Exception:
                     logger.exception("failed_to_record_agent_loop_trace")
@@ -196,12 +224,12 @@ class AgentOrchestrator:
 
     async def _agent_enabled(self, agent_type: str) -> bool:
         try:
-            settings = await self.client.list_agent_settings()
+            settings_list = await self.client.list_agent_settings()
         except Exception:
             return True
 
         aliases = self.AGENT_SETTING_ALIASES.get(agent_type, {agent_type})
-        for item in settings:
+        for item in settings_list:
             if str(item.get("agent_type") or "") in aliases:
                 return bool(item.get("enabled", True))
         return True

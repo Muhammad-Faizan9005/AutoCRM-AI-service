@@ -1,11 +1,17 @@
 from __future__ import annotations
 
 import json
+import logging
 
+from app.core.metrics import planner_failures_total
+from app.core.retry import classify_failure
 from app.schemas.events import AgentEventIn
 from app.schemas.planner import PlannedAction
+from app.services.action_policy import validate_planned_action
 from app.services.llm_service import LLMService
 from app.prompts import load_prompt
+
+logger = logging.getLogger(__name__)
 
 
 class PlannerService:
@@ -30,12 +36,21 @@ class PlannerService:
         prompt = load_prompt("planner", planner_context)
 
         try:
-            raw = await self.llm.generate(prompt=prompt, model_tier="small")
+            raw = await self.llm.generate(prompt=prompt, model_tier="small", json_mode=True)
             data = json.loads(raw)
             plan = PlannedAction.model_validate(data)
             return self._normalize_plan(payload, plan)
-        except Exception:
-            return fallback
+        except (json.JSONDecodeError, ValueError, KeyError) as exc:
+            # Parseable-but-malformed JSON or validation error — use fallback.
+            logger.warning(
+                "planner_fallback_used reason=parse_error error=%s",
+                exc,
+            )
+            planner_failures_total.inc(category="INVALID_REQUEST")
+            return self._normalize_plan(payload, fallback)
+        # Transport / circuit / retry-exhausted errors are NOT caught here —
+        # they propagate to the orchestrator's _execute_agent_loop try/except
+        # which marks the run as failed with a structured failure category.
 
     def _normalize_plan(self, payload: AgentEventIn, plan: PlannedAction) -> PlannedAction:
         if plan.selected_tool is None:
@@ -46,6 +61,10 @@ class PlannerService:
             plan.reason = self._fallback_plan(payload).reason
         if not plan.event_meaning:
             plan.event_meaning = self._fallback_plan(payload).event_meaning
+
+        # Enforce action policy (allowlist, approval, recipient sanitisation)
+        plan = validate_planned_action(plan, payload)
+
         return plan
 
     def _fallback_plan(self, payload: AgentEventIn) -> PlannedAction:

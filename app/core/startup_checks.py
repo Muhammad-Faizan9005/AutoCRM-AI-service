@@ -25,3 +25,16 @@ async def verify_backend_connectivity() -> dict[str, object]:
         result.get("agent_key"),
     )
     return result
+
+
+async def verify_security_config() -> None:
+    """Fail-fast if the webhook token is missing outside development.
+
+    Called from ``main.py`` lifespan — aborting startup is consistent with
+    how ``verify_backend_connectivity`` already raises on missing config.
+    """
+    if not settings.is_dev and not settings.ai_service_webhook_token:
+        raise RuntimeError(
+            "AI_SERVICE_WEBHOOK_TOKEN is required outside development. "
+            "Set the environment variable or use DEV_MODE=true / APP_ENV=development."
+        )

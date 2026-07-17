@@ -17,6 +17,7 @@ class RunContext:
     entity_id: UUID
     entity_type: str
     idempotency_key: str
+    correlation_id: str = ""
 
 
 class RunManager:

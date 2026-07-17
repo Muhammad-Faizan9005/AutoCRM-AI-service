@@ -1,10 +1,17 @@
 # Workflow: Daily CRM Summary
 
-Create a concise daily CRM summary for one user or manager.
+Create a concise daily CRM summary for one recipient using only their role-scoped CRM visibility.
+
+## Scope (from `scope`)
+- `owned`: sales rep. Write about their own leads/deals/tasks.
+- `team`: sales manager. The records belong to their team's reps; refer to team activity and rep-level risks. Never assume the manager personally owns records.
+- `global`: admin. Describe CRM-wide movement and cross-team issues at a high level; do not drown in individual records.
 
 ## Use This Context
-- `owned_leads`: current leads owned by the user.
-- `owned_deals`: current deals owned by the user.
+- `scope`: the recipient's visibility (`owned` | `team` | `global`).
+- `owned_leads`: leads in the recipient's scope.
+- `owned_deals`: deals in the recipient's scope.
+- `tasks`: tasks in the recipient's scope (overdue/upcoming first).
 - `rag_docs`: recent or relevant notes, calls, tasks, leads, deals, organizations, customers.
 - `entity_memory`: prior AI activity and outstanding AI-created actions.
 
@@ -40,7 +47,8 @@ Do not add extra bullets, questions, hypotheses, or suggested investigations alo
 - Return plain text only.
 - Use 3 to 6 bullets, or 1 bullet only if fallback fires.
 - Start every bullet with "- ".
-- Every bullet must start with one of these exact prefixes: "Follow up:", "Deal risk:", "Task due:", "Meeting note:", "Data gap:".
+- Every bullet must start with one of these exact prefixes: "Follow up:", "Deal risk:", "Task due:", "Meeting note:", "Data gap:", "Team update:", "CRM activity:".
+- For `team` and `global` scope, prefer "Team update:" and "CRM activity:" for roll-up observations that are not a single rep's follow-up.
 - Each bullet must be actionable and grounded only in owned_leads, owned_deals, rag_docs, or entity_memory.
 - Mention concrete entities when known: lead, company, deal, stage, blocker, or task name.
 - If overdue task context is present, use the "Task due:" prefix and mention the task name when known.

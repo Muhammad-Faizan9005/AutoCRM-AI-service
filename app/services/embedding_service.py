@@ -60,9 +60,18 @@ class HuggingFaceEmbeddingService:
         self._model = None
 
     async def embed(self, text: str) -> list[float]:
-        if not self.api_token:
-            raise RuntimeError("HUGGINGFACE_API_TOKEN is required for Hugging Face embeddings")
-
+        # -------------------------------------------------------------------
+        # DISABLED (2026-07-18): mid-request HUGGINGFACE_API_TOKEN config check.
+        # What it was: a lazy guard that raised only on the first embed() call
+        #   if the token was unset.
+        # Why disabled: config should fail fast at boot. This is now validated
+        #   at startup by `verify_provider_config()` (app/core/startup_checks.py)
+        #   whenever EMBEDDING_PROVIDER=huggingface — aborts in prod, warns in dev.
+        # Kept commented (not deleted) as reference / fallback.
+        #
+        # if not self.api_token:
+        #     raise RuntimeError("HUGGINGFACE_API_TOKEN is required for Hugging Face embeddings")
+        # -------------------------------------------------------------------
         model = await asyncio.to_thread(self._load_model)
         embedding = await asyncio.to_thread(
             model.encode,

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from uuid import UUID
 
 from app.schemas.actions import AgentAction
@@ -98,7 +99,7 @@ class TaskDeadlineWatchWorkflow(BaseWorkflow):
                 "actor_id": candidate.get("assigned_to") or candidate.get("owner_id"),
             },
             requires_approval=False,
-            idempotency_key=f"task-deadline-note:{payload.entity_id}:{candidate.get('llm_cache_key')}",
+            idempotency_key=self._note_idempotency_key(payload.entity_id, candidate),
         )
         action_id = await action_manager.create_action(run_context.run_id, action)
         await client.create_run_trace(
@@ -107,6 +108,23 @@ class TaskDeadlineWatchWorkflow(BaseWorkflow):
             status="completed",
             payload={"action_id": str(action_id), "approval_required": False},
         )
+
+    @staticmethod
+    def _note_idempotency_key(entity_id: object, candidate: dict[str, object]) -> str:
+        """Build a deterministic idempotency key that fits the backend's 64-char cap.
+
+        The backend's AgentActionIn schema limits idempotency_key to max_length=64.
+        The old key embedded the full llm_cache_key (which itself contains the task
+        UUID + severity + hash), producing ~130 chars and a 422 rejection. We use the
+        candidate's context_hash instead — it already encodes task identity, severity,
+        and content, so idempotency semantics are preserved. Falls back to a hash of
+        llm_cache_key if context_hash is absent.
+        """
+        discriminator = candidate.get("context_hash")
+        if not discriminator:
+            cache_key = str(candidate.get("llm_cache_key") or "")
+            discriminator = hashlib.sha256(cache_key.encode("utf-8")).hexdigest()[:16]
+        return f"tdn:{entity_id}:{discriminator}"
 
     @staticmethod
     def _fallback_summary(candidate: dict[str, object]) -> str:

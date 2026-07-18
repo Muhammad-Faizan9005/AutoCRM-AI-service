@@ -38,3 +38,51 @@ async def verify_security_config() -> None:
             "AI_SERVICE_WEBHOOK_TOKEN is required outside development. "
             "Set the environment variable or use DEV_MODE=true / APP_ENV=development."
         )
+
+
+def verify_provider_config() -> None:
+    """Validate credentials for the providers/features that are actually enabled.
+
+    Previously these checks lived deep inside the services and only fired the
+    first time a job ran (e.g. AssemblyAI key was validated at line ~277 of
+    ``transcription_service.py``, mid-request). Moving them here makes a
+    misconfiguration surface at startup instead of silently failing a workflow
+    hours later.
+
+    Strictness follows the same convention as ``verify_security_config``: a
+    missing config aborts startup in production, but only logs a warning in
+    development so local runs without every provider still work.
+    """
+    problems: list[str] = []
+
+    # LLM provider — only require the key for the provider that is selected.
+    if settings.llm_enabled:
+        provider = settings.llm_provider.strip().lower()
+        if provider == "openai" and not settings.openai_api_key:
+            problems.append("OPENAI_API_KEY is required when LLM_PROVIDER=openai")
+        elif provider not in {"openai", "ollama"}:
+            problems.append(f"Unsupported LLM_PROVIDER: {settings.llm_provider!r}")
+
+    # Embedding provider — only require the token for the selected provider.
+    if settings.embedding_provider.strip().lower() == "huggingface" and not settings.huggingface_api_token:
+        problems.append("HUGGINGFACE_API_TOKEN is required when EMBEDDING_PROVIDER=huggingface")
+
+    # Transcription — AssemblyAI is always used by the transcription pipeline,
+    # so validate both the key and that the SDK is importable up front.
+    if not settings.assemblyai_api_key:
+        problems.append("ASSEMBLYAI_API_KEY is not configured (required for the transcription pipeline)")
+    else:
+        try:
+            import assemblyai  # noqa: F401
+        except ImportError:
+            problems.append("assemblyai package is not installed (run: pip install assemblyai)")
+
+    if not problems:
+        return
+
+    detail = "; ".join(problems)
+    if settings.is_dev:
+        logger.warning("provider_config_incomplete (dev mode, continuing): %s", detail)
+        return
+    logger.error("provider_config_check_failed: %s", detail)
+    raise RuntimeError(f"Provider configuration invalid: {detail}")

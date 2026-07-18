@@ -269,13 +269,28 @@ class TranscriptionService:
         return dict(row) if row else None
 
     async def _transcribe(self, job: dict[str, Any]) -> dict[str, str | None]:
+        # NOTE: `import assemblyai` stays here because `aai` is used below to build
+        # the transcriber. The ImportError guard is kept as a defensive fallback,
+        # but package availability is now also validated at startup by
+        # `verify_provider_config()` in app/core/startup_checks.py.
         try:
             import assemblyai as aai
         except ImportError as exc:
             raise RuntimeError("assemblyai package is not installed. Run: pip install assemblyai") from exc
 
-        if not settings.assemblyai_api_key:
-            raise RuntimeError("ASSEMBLYAI_API_KEY is not configured")
+        # -------------------------------------------------------------------
+        # DISABLED (2026-07-18): mid-request AssemblyAI config check.
+        # What it was: a lazy guard that raised only the first time a
+        #   transcription job ran, if ASSEMBLYAI_API_KEY was unset.
+        # Why disabled: config should fail fast at boot, not hours later when a
+        #   scheduled job happens to fire. This exact check now runs at startup
+        #   in `verify_provider_config()` (app/core/startup_checks.py), which
+        #   aborts startup in prod and warns in dev.
+        # Kept commented (not deleted) as reference / fallback.
+        #
+        # if not settings.assemblyai_api_key:
+        #     raise RuntimeError("ASSEMBLYAI_API_KEY is not configured")
+        # -------------------------------------------------------------------
 
         audio_source = self._resolve_audio_source(job)
 
@@ -283,15 +298,15 @@ class TranscriptionService:
             aai.settings.api_key = settings.assemblyai_api_key
             try:
                 config = aai.TranscriptionConfig(
-                    speech_models=["universal-3-pro", "universal-2"],
-                    language_code="en",
+                    speech_models=settings.assemblyai_speech_models,
+                    language_code=settings.assemblyai_language_code,
                 )
             except TypeError:
                 # Older SDKs available on some package indexes do not expose the
                 # newer speech_models fallback-list parameter yet. Keep the
-                # pipeline working with English transcription and the SDK default
-                # speech model instead of failing at runtime.
-                config = aai.TranscriptionConfig(language_code="en")
+                # pipeline working with the configured language and the SDK
+                # default speech model instead of failing at runtime.
+                config = aai.TranscriptionConfig(language_code=settings.assemblyai_language_code)
             return aai.Transcriber(config=config).transcribe(audio_source)
 
         transcript = await asyncio.to_thread(_run_transcription)

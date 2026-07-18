@@ -197,6 +197,25 @@ class Settings(BaseSettings):
     transcription_retry_delay_seconds: int = 5
     transcription_processing_timeout_minutes: int = 30
     transcription_stale_sweep_interval_minutes: int = 30
+    # AssemblyAI model config. Stored as a comma-separated string in the env var
+    # (pydantic-settings would otherwise JSON-decode a list[str] env value);
+    # use the `assemblyai_speech_models` property to get the parsed ordered
+    # fallback list. language_code is the transcription language.
+    # e.g. ASSEMBLYAI_SPEECH_MODELS="universal-3-pro,universal-2".
+    assemblyai_speech_models_raw: str = Field(
+        default="universal-3-pro,universal-2",
+        validation_alias=AliasChoices("ASSEMBLYAI_SPEECH_MODELS"),
+    )
+    assemblyai_language_code: str = Field(
+        default="en",
+        validation_alias=AliasChoices("ASSEMBLYAI_LANGUAGE_CODE"),
+    )
+
+    @property
+    def assemblyai_speech_models(self) -> list[str]:
+        """Ordered AssemblyAI speech-model fallback list, parsed from the
+        comma-separated ``ASSEMBLYAI_SPEECH_MODELS`` setting."""
+        return [item.strip() for item in self.assemblyai_speech_models_raw.split(",") if item.strip()]
 
     class Config:
         env_file = ENV_FILE

@@ -122,8 +122,18 @@ class LLMService:
             return str(data.get("response") or "")
 
     async def _generate_openai(self, prompt: str, model: str, *, json_mode: bool = False) -> str:
-        if not settings.openai_api_key:
-            raise RuntimeError("OPENAI_API_KEY is not configured")
+        # -------------------------------------------------------------------
+        # DISABLED (2026-07-18): mid-request OPENAI_API_KEY config check.
+        # What it was: a lazy guard that raised only on the first OpenAI call
+        #   if the key was unset.
+        # Why disabled: config should fail fast at boot. This is now validated
+        #   at startup by `verify_provider_config()` (app/core/startup_checks.py)
+        #   whenever LLM_PROVIDER=openai — aborts in prod, warns in dev.
+        # Kept commented (not deleted) as reference / fallback.
+        #
+        # if not settings.openai_api_key:
+        #     raise RuntimeError("OPENAI_API_KEY is not configured")
+        # -------------------------------------------------------------------
         payload: dict = {
             "model": model,
             "messages": [{"role": "user", "content": prompt}],

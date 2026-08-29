@@ -53,6 +53,7 @@ class AgentOrchestrator:
         "task_auto": "action_manager_agent",
         "meeting_complete": "meeting_agent",
         "task_deadline_watch": "task_deadline_watcher",
+        "frontdesk_message": "frontdesk_agent",
     }
 
     AGENT_SETTING_ALIASES = {
@@ -62,6 +63,7 @@ class AgentOrchestrator:
         "daily_summary_assistant": {"daily_summary_assistant", "daily_summary", "summary_assistant"},
         "meeting_agent": {"meeting_agent", "meeting_assistant", "meeting_complete", "meeting_intel"},
         "task_deadline_watcher": {"task_deadline_watcher", "task_deadline_watch", "deadline_watch"},
+        "frontdesk_agent": {"frontdesk_agent", "frontdesk", "frontdesk_message"},
     }
 
     def __init__(self) -> None:

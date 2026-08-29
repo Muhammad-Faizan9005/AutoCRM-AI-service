@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import asyncio
 
 from app.config import settings
 from app.core import readiness
@@ -16,15 +17,24 @@ async def verify_backend_connectivity() -> dict[str, object]:
     if not settings.autocrm_ai_service_token:
         raise RuntimeError("AUTOCRM_AI_SERVICE_TOKEN is required")
 
-    logger.info("backend_heartbeat_check_started")
-    result = await AutoCRMClient().heartbeat()
-    readiness.mark_backend_connected(result)
-    logger.info(
-        "backend_heartbeat_ok status=%s agent_key=%s",
-        result.get("status"),
-        result.get("agent_key"),
-    )
-    return result
+    attempts = max(1, settings.backend_startup_max_attempts)
+    delay = max(0.25, settings.backend_startup_retry_delay_seconds)
+    last_error: Exception | None = None
+    for attempt in range(1, attempts + 1):
+        logger.info("backend_heartbeat_check_started attempt=%s max_attempts=%s", attempt, attempts)
+        try:
+            result = await AutoCRMClient().heartbeat()
+            readiness.mark_backend_connected(result)
+            logger.info("backend_heartbeat_ok status=%s agent_key=%s attempt=%s", result.get("status"), result.get("agent_key"), attempt)
+            return result
+        except Exception as exc:
+            last_error = exc
+            if attempt >= attempts:
+                break
+            wait_seconds = min(delay * (2 ** (attempt - 1)), 15.0)
+            logger.warning("backend_heartbeat_retry attempt=%s wait_seconds=%.1f error=%s", attempt, wait_seconds, type(exc).__name__)
+            await asyncio.sleep(wait_seconds)
+    raise RuntimeError(f"AutoCRM backend did not become ready after {attempts} attempts") from last_error
 
 
 async def verify_security_config() -> None:

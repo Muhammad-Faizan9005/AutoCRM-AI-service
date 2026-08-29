@@ -17,6 +17,7 @@ from app.core.startup_checks import (
     verify_security_config,
 )
 from app.db.pool import close_pool, init_pool
+from app.workflows.frontdesk import warm_frontdesk_runtime
 
 
 @asynccontextmanager
@@ -25,6 +26,13 @@ async def lifespan(app: FastAPI):
     logger = logging.getLogger(__name__)
     await init_pool()
     readiness.mark_database_connected()
+
+    # Warm FAISS and the embedding model before accepting the first chat.
+    try:
+        await warm_frontdesk_runtime()
+        logger.info("frontdesk_runtime_warmed")
+    except Exception as exc:
+        logger.warning("frontdesk_runtime_warm_failed: %s", exc)
 
     # Issue #5 — fail-fast if webhook token is missing outside dev
     try:

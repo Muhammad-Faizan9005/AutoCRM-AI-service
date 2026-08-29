@@ -4,7 +4,7 @@ import asyncio
 import json
 import logging
 from pathlib import Path
-from uuid import UUID
+from uuid import UUID, uuid5, NAMESPACE_URL
 
 from app.config import settings
 from app.services.autocrm_client import AutoCRMClient
@@ -43,11 +43,34 @@ class RagSyncService:
             if newest:
                 next_cursors[source] = newest
 
+        indexed_total += await self._index_frontdesk_knowledge()
+
         removed = await self.reconcile_deleted_sources()
         if removed:
             logger.info("rag_sync_removed_stale count=%s", removed)
         self._save_state({"cursors": next_cursors})
         return indexed_total
+
+    async def _index_frontdesk_knowledge(self) -> int:
+        """Index the local approved front-desk pack into the shared persistent RAG store."""
+        root = Path(__file__).resolve().parents[2] / "dev_knowledge"
+        if not root.exists():
+            return 0
+        indexed = 0
+        for path in sorted(root.glob("*.md")):
+            content = path.read_text(encoding="utf-8").strip()
+            if not content:
+                continue
+            await self.rag.add_document(
+                entity_id=uuid5(NAMESPACE_URL, f"autocrm:frontdesk:{path.name}"),
+                entity_type="frontdesk",
+                content=content,
+                source="frontdesk_knowledge",
+                source_id=path.stem,
+                metadata={"scope": "public", "status": "published", "source_table": "frontdesk_knowledge"},
+            )
+            indexed += 1
+        return indexed
 
     async def reconcile_deleted_sources(self) -> int:
         sources = await self.rag.list_indexed_sources(limit=1000)

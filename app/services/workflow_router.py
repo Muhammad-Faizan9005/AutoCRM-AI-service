@@ -7,6 +7,7 @@ from app.workflows.lead_nudge import LeadNudgeWorkflow
 from app.workflows.meeting_intel import MeetingIntelWorkflow
 from app.workflows.task_auto import TaskAutoWorkflow
 from app.workflows.task_deadline_watch import TaskDeadlineWatchWorkflow
+from app.workflows.frontdesk import FrontDeskWorkflow
 
 
 class WorkflowRouter:
@@ -23,4 +24,6 @@ class WorkflowRouter:
             return TaskDeadlineWatchWorkflow()
         if payload.event_type == "meeting_complete":
             return MeetingIntelWorkflow()
+        if payload.event_type == "frontdesk_message":
+            return FrontDeskWorkflow()
         return None

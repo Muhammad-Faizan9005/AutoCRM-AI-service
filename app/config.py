@@ -22,6 +22,8 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("AUTOCRM_BASE_URL", "AUTOCRM_BACKEND_URL"),
     )
     autocrm_auth_timeout: int = Field(default=10, validation_alias=AliasChoices("AUTOCRM_AUTH_TIMEOUT"))
+    backend_startup_max_attempts: int = Field(default=5, validation_alias=AliasChoices("BACKEND_STARTUP_MAX_ATTEMPTS"))
+    backend_startup_retry_delay_seconds: float = Field(default=2.0, validation_alias=AliasChoices("BACKEND_STARTUP_RETRY_DELAY_SECONDS"))
     autocrm_batch_timeout: int = Field(default=60, validation_alias=AliasChoices("AUTOCRM_BATCH_TIMEOUT"))
     ai_backend_connectivity_required: bool = Field(
         default=True,
@@ -36,6 +38,10 @@ class Settings(BaseSettings):
     ai_service_webhook_token: str = Field(default="", validation_alias=AliasChoices("AI_SERVICE_WEBHOOK_TOKEN"))
 
     database_url: str = Field(default="", validation_alias=AliasChoices("DATABASE_URL"))
+
+    # Zone the business books in; must match the backend's CAL_TIMEZONE. Bare
+    # clock times from a visitor ("3pm") are resolved in this zone, not UTC.
+    cal_timezone: str = Field(default="UTC", validation_alias=AliasChoices("CAL_TIMEZONE"))
 
     # Enables or disables all AI service scheduled background jobs.
     scheduler_enabled: bool = Field(default=True, validation_alias=AliasChoices("SCHEDULER_ENABLED"))
@@ -159,7 +165,8 @@ class Settings(BaseSettings):
         default=None, validation_alias=AliasChoices("TRANSCRIPTION_ENSURE_SCHEMA")
     )
 
-    vector_store: str = "memory"
+    # Persist the shared RAG index on disk so requests never rebuild it.
+    vector_store: str = Field(default="faiss", validation_alias=AliasChoices("VECTOR_STORE"))
     embedding_provider: str = "local"
     embedding_dimensions: int = 384
     huggingface_api_token: str = ""
@@ -172,7 +179,7 @@ class Settings(BaseSettings):
     # Enables or disables scheduled RAG index synchronization.
     rag_sync_enabled: bool = Field(default=True, validation_alias=AliasChoices("RAG_SYNC_ENABLED"))
     # How often the RAG index sync runs.
-    rag_sync_interval_hours: int = Field(default=24, validation_alias=AliasChoices("RAG_SYNC_INTERVAL_HOURS"))
+    rag_sync_interval_hours: int = Field(default=12, validation_alias=AliasChoices("RAG_SYNC_INTERVAL_HOURS"))
     # Maximum backend documents fetched in one RAG sync batch.
     rag_sync_batch_size: int = Field(default=100, validation_alias=AliasChoices("RAG_SYNC_BATCH_SIZE"))
     # Small delay between indexing individual RAG documents.

@@ -31,6 +31,9 @@ class VectorStore:
         raise NotImplementedError
 
 
+_VECTOR_STORE_CACHE: dict[str, VectorStore] = {}
+
+
 class InMemoryVectorStore(VectorStore):
     _chunks_by_entity: dict[str, list[ContextChunk]] = defaultdict(list)
 
@@ -225,11 +228,18 @@ class PgVectorStore(VectorStore):
 
 def build_vector_store(kind: str) -> VectorStore:
     normalized = kind.strip().lower()
+    cache_key = f"{normalized}:{Path(settings.rag_index_dir).resolve()}" if normalized == "faiss" else normalized
+    cached = _VECTOR_STORE_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
     if normalized == "faiss":
-        return FaissVectorStore(Path(settings.rag_index_dir))
-    if normalized in {"pgvector", "postgres", "postgresql"}:
-        return PgVectorStore()
-    return InMemoryVectorStore()
+        store = FaissVectorStore(Path(settings.rag_index_dir))
+    elif normalized in {"pgvector", "postgres", "postgresql"}:
+        store = PgVectorStore()
+    else:
+        store = InMemoryVectorStore()
+    _VECTOR_STORE_CACHE[cache_key] = store
+    return store
 
 
 class FaissVectorStore(VectorStore):
@@ -326,6 +336,17 @@ class FaissVectorStore(VectorStore):
             with self.metadata_path.open("rb") as handle:
                 data = pickle.load(handle)
                 self._chunks = data if isinstance(data, dict) else {}
+        self._chunk_ids = list(self._chunks.keys())
+        if self.index_path.exists() and self._chunk_ids:
+            try:
+                import faiss
+
+                loaded = faiss.read_index(str(self.index_path))
+                if loaded.ntotal == len(self._chunk_ids):
+                    self._index = loaded
+                    return
+            except Exception:
+                pass
         self._rebuild_index()
 
     def _persist(self) -> None:
